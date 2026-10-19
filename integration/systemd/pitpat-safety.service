@@ -1,0 +1,11 @@
+[Unit]
+Description=Independent PitPat Bluetooth safety process
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO_UNIT@
+ExecStart=@PYTHON_UNIT@ -u -m bridge.safety_main
+Restart=no
+TimeoutStopSec=10
+UMask=0077
+# Start on demand; deliberately no Install section or application stop coupling.
