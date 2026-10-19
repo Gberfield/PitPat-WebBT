@@ -1,0 +1,11 @@
+{
+  "schemaVersion": 1,
+  "id": "gabe.pitpat",
+  "name": "PitPat",
+  "version": "1.0.0",
+  "description": "Local treadmill controls and durable walk recording",
+  "kinds": ["service", "bar-widget"],
+  "keepLoaded": true,
+  "entryPoints": {"service": "Service.qml", "barWidget": "Widget.qml"},
+  "barWidget": {"displayName": "PitPat", "description": "Treadmill controls", "category": "Health", "allowMultiple": false}
+}

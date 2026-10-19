@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=PitPat Walk
+Comment=Treadmill controls and walking history
+Exec=@HELPER_DESKTOP@ controls
+Icon=utilities-system-monitor
+Terminal=false
+Categories=Utility;

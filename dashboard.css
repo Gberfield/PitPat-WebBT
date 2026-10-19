@@ -1,0 +1,223 @@
+        html, body {
+            height: 100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            background: #f8f9fa;
+            min-height: 100vh;
+            width: 100vw;
+            overflow-x: hidden;
+        }
+        .center-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 2em 0;
+            box-sizing: border-box;
+            width: 100vw;
+            max-width: 100vw;
+        }
+        h1 {
+            margin-top: 0.5em;
+            margin-bottom: 0.5em;
+            font-size: 1.7em;
+            text-align: center;
+            line-height: 1.1;
+            font-weight: 600;
+        }
+        .dashboard {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1em;
+            margin-bottom: 1em;
+            justify-content: center;
+            width: 100%;
+            max-width: 900px;
+            box-sizing: border-box;
+        }
+        .mdl-card {
+            min-width: 120px;
+            max-width: 260px;
+            flex: 1 1 calc(33.333% - 1em);
+            text-align: center;
+            box-sizing: border-box;
+            padding: 0.35em 0.5em 0.35em 0.5em;
+            margin: 0;
+            min-height: 0;
+            height: auto;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        .mdl-card__title {
+            justify-content: center;
+            padding: 0.35em 0 0.2em 0;
+            min-height: unset;
+            text-align: center;
+            width: 100%;
+        }
+        .mdl-card__supporting-text {
+            padding: 0.2em 0 0.35em 0;
+            text-align: center;
+            width: 100%;
+        }
+        .card-title { font-size: 1.05em; color: #888; }
+        .card-value { font-size: 1.5em; margin-top: 0.1em; color: #222; font-weight: 700; }
+        .controls {
+            display: flex;
+            gap: 1em;
+            margin-bottom: 1em;
+            width: 100%;
+            max-width: 600px;
+            justify-content: center;
+            box-sizing: border-box;
+        }
+        .slider-group { margin: 1em 0; width: 100%; max-width: 400px; }
+        .slider-label { margin-bottom: 0.5em; display: block; }
+        #status { margin-top: 1em; text-align: center; }
+        .mdl-slider { width: 100%; max-width: 300px; }
+        .mdl-textfield { flex: 1; }
+        .btn-red {
+            background-color: #d32f2f !important;
+            color: #fff !important;
+        }
+        .btn-green {
+            background-color: #388e3c !important;
+            color: #fff !important;
+        }
+        .btn-red:disabled, .btn-green:disabled {
+            opacity: 0.5 !important;
+            filter: grayscale(30%);
+            cursor: not-allowed !important;
+            box-shadow: none !important;
+        }
+        .chip-connected {
+            background: #388e3c !important;
+            color: #fff !important;
+        }
+        .chip-connecting {
+            background: #fbc02d !important;
+            color: #222 !important;
+        }
+        .chip-disconnected {
+            background: #d32f2f !important;
+            color: #fff !important;
+        }
+        .chip-paused {
+            background: #fbc02d !important;
+            color: #222 !important;
+        }
+        @media (max-width: 900px) {
+            .dashboard { max-width: 100vw; }
+        }
+        @media (max-width: 800px) {
+            .center-container { padding: 0.5em 0; }
+            .dashboard {
+                gap: 0.7em;
+                max-width: 100vw;
+            }
+            .mdl-card {
+                min-width: 0;
+                max-width: 100%;
+                flex: 1 1 calc(50% - 0.7em);
+                padding: 0.25em 0.3em 0.25em 0.3em;
+                min-height: 0;
+                height: auto;
+            }
+            .controls { flex-direction: column; gap: 0.7em; max-width: 100%; }
+            .slider-group { max-width: 100%; }
+        }
+        @media (max-width: 500px) {
+            .center-container { padding: 0.5em 1em; }
+            h1 { font-size: 1.05em; margin-top: 0.3em; margin-bottom: 0.3em; }
+            .card-title { font-size: 1em; }
+            .card-value { font-size: 1.1em; }
+            .mdl-slider { max-width: 100%; }
+            .dashboard { gap: 0.4em; }
+            .mdl-card {
+                padding: 0.15em 0.15em 0.15em 0.15em;
+                min-height: 0;
+                height: auto;
+            }
+            .controls {
+                flex-wrap: wrap;
+                flex-direction: row;
+                gap: 0.4em;
+            }
+            .controls button {
+                flex: 1 1 45%;
+                min-width: 0;
+                max-width: 100%;
+                margin: 0;
+            }
+            .history-table-container {
+                width: 100vw;
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                margin-left: -1em;
+                margin-right: -1em;
+            }
+            .mdl-data-table th, .mdl-data-table td {
+                padding: 0.4em 0.3em;
+            }
+        }
+
+.local-style-1 {justify-content:center;display:flex;}
+
+.local-style-2 {padding:1em;border:2px solid #b71c1c;font-weight:bold;}
+
+.local-style-3 {max-width:700px;padding:1em;border:1px solid #aaa;}
+
+.local-style-4 {max-width:600px;padding:0 1em;}
+
+.local-style-5 {vertical-align: middle;}
+
+.local-style-6 {display:flex;justify-content:center;gap:0.5em;margin-bottom:0.5em;width:100%;max-width:700px;}
+
+.local-style-7 {display:none;}
+
+.local-style-8 {width:100%;max-width:900px;overflow-wrap:anywhere;}
+
+.local-style-9 {display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;}
+
+.local-style-10 {width:64px;height:64px;}
+
+.local-style-11 {display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(33,33,33,0.85);z-index:10000;align-items:center;justify-content:center;opacity:1;transition:opacity 0.5s;}
+
+.local-style-12 {color:#fff;font-size:6em;font-weight:bold;transition:transform 0.3s, opacity 0.3s;}
+
+/* Local baseline: the dashboard needs no CDN, icon font, or framework upgrade. */
+[hidden] { display: none !important; }
+body { color: #1f2937; line-height: 1.5; }
+button, input { font: inherit; }
+button { border: 1px solid #cbd5e1; border-radius: 8px; padding: .55rem .9rem; cursor: pointer; background: white; color: #1f2937; }
+button:disabled { opacity: .5; cursor: not-allowed; }
+button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid #2563eb; outline-offset: 3px; }
+.mdl-layout__header { background: #153b4a; padding: 1rem; }
+.mdl-layout__tab-bar { display: flex; gap: 1.5rem; }
+.mdl-layout__tab { color: #d5e7ed; text-decoration: none; padding: .35rem .75rem; border-radius: 6px; }
+.mdl-layout__tab.is-active { color: white; background: #315a68; }
+.mdl-card { background: white; border: 1px solid #e2e8f0; border-radius: 12px; padding: 1.1rem; }
+.mdl-chip { border-radius: 5px; padding: .15rem .5rem; }
+.controls { flex-wrap: wrap; align-items: center; }
+#transportStatus { text-align: center; font-weight: 600; }
+#safetyStatus { margin: 1rem; background: #fff7ed; border-radius: 8px; }
+#recoveryNotice { margin: 1rem auto; }
+#loadingOverlay, #countdownOverlay { pointer-events: none; }
+#loadingOverlay { background: transparent; }
+#countdownOverlay { background: rgba(33,33,33,.5); }
+#stopBtn { position: relative; z-index: 10001; }
+#snackbar { display: none; position: fixed; bottom: 1rem; left: 1rem; right: 1rem; max-width: 45rem; margin: auto; padding: 1rem; border-radius: 8px; color: white; background: #1f2937; z-index: 11000; }
+#snackbar.mdl-snackbar--active { display: block; }
+#deviceDialog { border: 1px solid #94a3b8; border-radius: 12px; max-width: 32rem; }
+#deviceDialog::backdrop { background: rgba(0,0,0,.4); }
+#deviceChoices { display: flex; flex-direction: column; gap: .75rem; margin-bottom: 1rem; }
+.history-table-container { max-width: 100%; overflow: auto; }
+table { border-collapse: collapse; background: white; }
+th, td { padding: .65rem; text-align: left; border-bottom: 1px solid #e2e8f0; }

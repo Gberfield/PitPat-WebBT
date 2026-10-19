@@ -2,198 +2,37 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>PitPat Treadmill Control (Web Bluetooth)</title>
-    <!-- MDL CSS & JS -->
-    <link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.blue-light_blue.min.css">
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
+    <title>PitPat Walking</title>
+    <link rel="stylesheet" href="dashboard.css">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        html, body {
-            height: 100%;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            background: #f8f9fa;
-            min-height: 100vh;
-            width: 100vw;
-            overflow-x: hidden;
-        }
-        .center-container {
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 2em 0;
-            box-sizing: border-box;
-            width: 100vw;
-            max-width: 100vw;
-        }
-        h1 {
-            margin-top: 0.5em;
-            margin-bottom: 0.5em;
-            font-size: 1.7em;
-            text-align: center;
-            line-height: 1.1;
-            font-weight: 600;
-        }
-        .dashboard {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 1em;
-            margin-bottom: 1em;
-            justify-content: center;
-            width: 100%;
-            max-width: 900px;
-            box-sizing: border-box;
-        }
-        .mdl-card {
-            min-width: 120px;
-            max-width: 260px;
-            flex: 1 1 calc(33.333% - 1em);
-            text-align: center;
-            box-sizing: border-box;
-            padding: 0.35em 0.5em 0.35em 0.5em;
-            margin: 0;
-            min-height: 0;
-            height: auto;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-        .mdl-card__title {
-            justify-content: center;
-            padding: 0.35em 0 0.2em 0;
-            min-height: unset;
-            text-align: center;
-            width: 100%;
-        }
-        .mdl-card__supporting-text {
-            padding: 0.2em 0 0.35em 0;
-            text-align: center;
-            width: 100%;
-        }
-        .card-title { font-size: 1.05em; color: #888; }
-        .card-value { font-size: 1.5em; margin-top: 0.1em; color: #222; font-weight: 700; }
-        .controls {
-            display: flex;
-            gap: 1em;
-            margin-bottom: 1em;
-            width: 100%;
-            max-width: 600px;
-            justify-content: center;
-            box-sizing: border-box;
-        }
-        .slider-group { margin: 1em 0; width: 100%; max-width: 400px; }
-        .slider-label { margin-bottom: 0.5em; display: block; }
-        #status { margin-top: 1em; text-align: center; }
-        .mdl-slider { width: 100%; max-width: 300px; }
-        .mdl-textfield { flex: 1; }
-        .btn-red {
-            background-color: #d32f2f !important;
-            color: #fff !important;
-        }
-        .btn-green {
-            background-color: #388e3c !important;
-            color: #fff !important;
-        }
-        .btn-red:disabled, .btn-green:disabled {
-            opacity: 0.5 !important;
-            filter: grayscale(30%);
-            cursor: not-allowed !important;
-            box-shadow: none !important;
-        }
-        .chip-connected {
-            background: #388e3c !important;
-            color: #fff !important;
-        }
-        .chip-connecting {
-            background: #fbc02d !important;
-            color: #222 !important;
-        }
-        .chip-disconnected {
-            background: #d32f2f !important;
-            color: #fff !important;
-        }
-        .chip-paused {
-            background: #fbc02d !important;
-            color: #222 !important;
-        }
-        @media (max-width: 900px) {
-            .dashboard { max-width: 100vw; }
-        }
-        @media (max-width: 800px) {
-            .center-container { padding: 0.5em 0; }
-            .dashboard {
-                gap: 0.7em;
-                max-width: 100vw;
-            }
-            .mdl-card {
-                min-width: 0;
-                max-width: 100%;
-                flex: 1 1 calc(50% - 0.7em);
-                padding: 0.25em 0.3em 0.25em 0.3em;
-                min-height: 0;
-                height: auto;
-            }
-            .controls { flex-direction: column; gap: 0.7em; max-width: 100%; }
-            .slider-group { max-width: 100%; }
-        }
-        @media (max-width: 500px) {
-            .center-container { padding: 0.5em 1em; }
-            h1 { font-size: 1.05em; margin-top: 0.3em; margin-bottom: 0.3em; }
-            .card-title { font-size: 1em; }
-            .card-value { font-size: 1.1em; }
-            .mdl-slider { max-width: 100%; }
-            .dashboard { gap: 0.4em; }
-            .mdl-card {
-                padding: 0.15em 0.15em 0.15em 0.15em;
-                min-height: 0;
-                height: auto;
-            }
-            .controls {
-                flex-wrap: wrap;
-                flex-direction: row;
-                gap: 0.4em;
-            }
-            .controls button {
-                flex: 1 1 45%;
-                min-width: 0;
-                max-width: 100%;
-                margin: 0;
-            }
-            .history-table-container {
-                width: 100vw;
-                overflow-x: auto;
-                -webkit-overflow-scrolling: touch;
-                margin-left: -1em;
-                margin-right: -1em;
-            }
-            .mdl-data-table th, .mdl-data-table td {
-                padding: 0.4em 0.3em;
-            }
-        }
-    </style>
 </head>
 <body>
     <div class="mdl-layout mdl-js-layout mdl-layout--fixed-tabs">
-        <header class="mdl-layout__header mdl-layout__header--scroll" style="justify-content:center;display:flex;">
-            <div class="mdl-layout__tab-bar mdl-js-ripple-effect">
+        <header class="local-style-1 mdl-layout__header mdl-layout__header--scroll">
+            <div class="mdl-layout__tab-bar" role="tablist" aria-label="Dashboard">
                 <a href="#controls-panel" class="mdl-layout__tab is-active">Controls</a>
                 <a href="#history-panel" class="mdl-layout__tab">History</a>
             </div>
         </header>
         <main class="mdl-layout__content">
-            <section class="mdl-layout__tab-panel is-active" id="controls-panel">
+            <p id="ownerStatus" role="status"></p>
+            <p id="historyStatus" role="status"></p>
+            <p id="transportStatus" role="status">Checking connection support…</p>
+            <div id="safetyStatus" role="alert" hidden class="local-style-2"></div>
+                    <div id="recoveryNotice" hidden class="local-style-3">
+                        <p>A walk was interrupted. Reconnect and choose whether to continue the same record or keep it and begin a new record. These buttons only affect tracking; they do not start or stop the treadmill.</p>
+                        <button id="continueWalkBtn" type="button">Continue same walk record</button>
+                        <button id="newWalkRecordBtn" type="button">Keep previous and start new record</button>
+                    </div>
+
+            <section class="mdl-layout__tab-panel is-active" id="controls-panel" role="tabpanel">
                 <div class="center-container">
                     <div class="controls">
                         <button id="connectBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-button--primary">Connect</button>
+                        <button id="takeControlBtn" type="button" hidden>Take control while stopped</button>
+                        <button id="recoverBridgeBtn" type="button" hidden>Recover Stop control</button>
                     </div>
+                    <p class="local-style-4">Bluetooth loss or closing this page does not guarantee the belt stops. Keep the physical stop control available.</p>
                     <div class="dashboard">
                         <div class="mdl-card mdl-shadow--2dp">
                             <div class="mdl-card__title"><span class="card-title">Speed</span></div>
@@ -217,27 +56,34 @@
                         </div>
                         <div class="mdl-card mdl-shadow--2dp">
                             <div class="mdl-card__title"><span class="card-title">Running State</span></div>
-                            <span id="statusChip" class="mdl-chip chip-disconnected" style="vertical-align: middle;"><span class="mdl-chip__text">Disconnected</span></span>
+                            <span id="statusChip" class="local-style-5 mdl-chip chip-disconnected"><span class="mdl-chip__text">Disconnected</span></span>
                         </div>
                     </div>
                     <div class="controls">
                         <button id="startBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect btn-green" disabled>Start</button>
                         <button id="stopBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect btn-red" disabled>Stop</button>
-                        <button id="speedDownBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" disabled>Speed Down</button>
-                        <button id="speedUpBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" disabled>Speed Up</button>
+                        <button id="speedDownBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" disabled>−0.1 MPH</button>
+                        <button id="speedUpBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect" disabled>+0.1 MPH</button>
                     </div>
                     <div class="slider-group">
-                        <label class="slider-label" for="speedSlider">Set Speed (kph): <span id="sliderValue">0</span></label>
-                        <input type="range" id="speedSlider" min="1" max="6" step="0.1" value="1" class="mdl-slider mdl-js-slider">
+                        <label class="slider-label" for="speedSlider">Set Speed (MPH): <span id="sliderValue">0.62</span></label>
+                        <input type="range" id="speedSlider" min="0.62" max="3.73" step="0.01" value="0.62" class="mdl-slider mdl-js-slider">
+                        <small>Targets round to the treadmill’s 0.1 kph steps (about 0.06 MPH). Range: 0.62–3.73 MPH.</small>
                     </div>
                 </div>
             </section>
-            <section class="mdl-layout__tab-panel" id="history-panel">
+            <section class="mdl-layout__tab-panel" id="history-panel" role="tabpanel" hidden>
                 <div class="center-container">
-                    <div style="display:flex;justify-content:center;gap:0.5em;margin-bottom:0.5em;width:100%;max-width:700px;">
+                    <div class="local-style-6">
                         <button id="exportHistoryBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">Export</button>
                         <button id="importHistoryBtn" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">Import</button>
-                        <input type="file" id="importHistoryInput" accept="application/json" style="display:none;" />
+                        <button id="prepareNotionBtn" type="button">Prepare for Notion</button>
+                        <input type="file" id="importHistoryInput" accept="application/json" class="local-style-7">
+                    </div>
+                    <div class="local-style-8">
+                        <p>Preview completed or interrupted walks, then download and provide the file in this chat for Notion import. Active walks are excluded. Pace and cadence use the device’s duration counter; exact active time and active versus total Calories are unknown.</p>
+                        <div id="notionPreview" aria-live="polite"></div>
+                        <button id="downloadNotionBtn" type="button" disabled>Download Notion export</button>
                     </div>
                     <div class="history-table-container">
                         <table class="mdl-data-table mdl-js-data-table mdl-shadow--2dp" >
@@ -247,6 +93,8 @@
                                     <th>Duration</th>
                                     <th>Steps</th>
                                     <th>Calories</th>
+                                    <th>Distance</th>
+                                    <th>Record state</th>
                                     <th>Avg Speed</th>
                                     <th>Action</th>
                                 </tr>
@@ -261,19 +109,27 @@
         </main>
     </div>
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(255,255,255,0.7);z-index:9999;align-items:center;justify-content:center;">
-        <div class="mdl-spinner mdl-js-spinner is-active" style="width:64px;height:64px;"></div>
+    <div id="loadingOverlay" class="local-style-9">
+        <div class="local-style-10 mdl-spinner mdl-js-spinner is-active"></div>
     </div>
     <!-- Countdown Overlay -->
-    <div id="countdownOverlay" style="display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(33,33,33,0.85);z-index:10000;align-items:center;justify-content:center;opacity:1;transition:opacity 0.5s;">
-        <span id="countdownNumber" style="color:#fff;font-size:6em;font-weight:bold;transition:transform 0.3s, opacity 0.3s;">3</span>
+    <div id="countdownOverlay" class="local-style-11">
+        <span id="countdownNumber" class="local-style-12">3</span>
     </div>
     <!-- Snackbar for toast messages -->
     <div id="snackbar" class="mdl-js-snackbar mdl-snackbar">
-        <div class="mdl-snackbar__text"></div>
+        <div class="mdl-snackbar__text" role="status" aria-live="polite"></div>
         <button class="mdl-snackbar__action" type="button"></button>
     </div>
-    <script src="https://cdn.jsdelivr.net/npm/date-fns@4.1.0/cdn.min.js"></script>
+    <dialog id="deviceDialog" aria-labelledby="deviceDialogTitle">
+        <h2 id="deviceDialogTitle">Choose your treadmill</h2>
+        <div id="deviceChoices"></div>
+        <button id="cancelDeviceBtn" type="button">Cancel</button>
+    </dialog>
+    <script src="dashboard-ui.js"></script>
+    <script src="transports.js"></script>
+    <script src="walks.js"></script>
+    <script src="protocol.js"></script>
     <script src="treadmill.js"></script>
 </body>
 </html>
