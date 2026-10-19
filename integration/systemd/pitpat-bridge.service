@@ -1,0 +1,13 @@
+[Unit]
+Description=Local PitPat treadmill application
+Wants=pitpat-safety.service
+After=pitpat-safety.service
+
+[Service]
+Type=simple
+WorkingDirectory=@REPO_UNIT@
+ExecStart=@PYTHON_UNIT@ -u -m bridge --port 8766
+Restart=no
+TimeoutStopSec=35
+UMask=0077
+# Deliberately no Install section: start on demand, never enable at login.
