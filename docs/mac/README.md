@@ -60,16 +60,16 @@ Root causes, all verified on this Mac:
 Do them in order unless marked parallel. Each file is self-contained: scope,
 exact files, steps, tests, acceptance criteria and things not to do.
 
-| # | Plan | Depends on | Size |
-|---|---|---|---|
-| 01 | [Platform shim: clock, peer credentials, paths, opener](01-platform-shim.md) | — | S |
-| 02 | [Private-path checks vs. macOS system symlinks; socket path length](02-path-safety.md) | 01 | S |
-| 03 | [Portable test suite + GitHub Actions (Linux and macOS)](03-tests-and-ci.md) | 01, 02 | S |
-| 04 | [Bleak/CoreBluetooth backend and Bluetooth permission](04-bluetooth-macos.md) | 01 | M |
-| 05 | [launchd services and the `pitpat` desktop helper](05-launchd-and-helper.md) | 01, 02 | M |
-| 06 | [Menu bar controller (replaces the Omarchy tray)](06-menu-bar-app.md) | 05 | L |
-| 07 | [macOS installer with plan/apply/rollback](07-installer.md) | 05, 06 | M |
-| 08 | [Docs and acceptance checklist](08-docs-and-acceptance.md) | all | S |
+| # | Plan | Issue | Depends on | Size |
+|---|---|---|---|---|
+| 01 | [Platform shim: clock, peer credentials, paths, opener](01-platform-shim.md) | #4 | — | S |
+| 02 | [Private-path checks vs. macOS system symlinks; socket path length](02-path-safety.md) | #5 | 01 | S |
+| 03 | [Portable test suite + GitHub Actions (Linux and macOS)](03-tests-and-ci.md) | #6 | 01, 02 | S |
+| 04 | [Bleak/CoreBluetooth backend and Bluetooth permission](04-bluetooth-macos.md) | #7 | 01 | M |
+| 05 | [launchd services and the `pitpat` desktop helper](05-launchd-and-helper.md) | #8 | 01, 02 | M |
+| 06 | [Menu bar controller (replaces the Omarchy tray)](06-menu-bar-app.md) | #9 | 05 | L |
+| 07 | [macOS installer with plan/apply/rollback](07-installer.md) | #10 | 05, 06 | M |
+| 08 | [Docs and acceptance checklist](08-docs-and-acceptance.md) | #11 | all | S |
 
 01–03 make the existing software pass on a Mac with the simulator. 04 is the
 first step that touches real Bluetooth. 05–07 replace the Linux desktop
