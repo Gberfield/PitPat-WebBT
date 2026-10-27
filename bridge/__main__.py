@@ -9,6 +9,7 @@ from .server import create_app
 from .native import RuntimeLock, NativeServer
 from .store import WalkStore
 from .recorder import Recorder
+from .platform_paths import runtime_dir, state_dir
 
 
 def main():
@@ -20,9 +21,9 @@ def main():
     args = parser.parse_args()
     if not 1 <= args.port <= 65535:
         parser.error('port must be 1–65535')
-    state = args.state_dir or Path(os.environ.get('XDG_STATE_HOME', str(Path.home() / '.local/state'))) / 'pitpat'
+    state = args.state_dir or state_dir()
     if args.state_dir is None and args.simulate: state /= 'simulator'
-    runtime = args.runtime_dir or Path(os.environ.get('XDG_RUNTIME_DIR', f'/run/user/{os.getuid()}')) / ('pitpat-simulator' if args.simulate else 'pitpat')
+    runtime = args.runtime_dir or runtime_dir(args.simulate)
     # Lock before touching the database or HTTP/native listeners.
     try: guard = RuntimeLock(runtime, name='bridge.lock')
     except ValueError as exc: parser.error(str(exc))
