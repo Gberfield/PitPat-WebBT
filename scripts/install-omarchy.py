@@ -16,6 +16,7 @@ import re
 import secrets
 import shlex
 import stat
+import sys
 import tempfile
 from zoneinfo import ZoneInfo
 
@@ -25,10 +26,21 @@ STATIC_PATHS=('.config/omarchy/shell.json','.config/hypr/bindings.lua',
               '.local/share/applications/pitpat.desktop')
 
 
+# Copy of bridge/platform_paths.py; this script imports only the standard library.
+SYSTEM_LINKS={'/var':'private/var','/tmp':'private/tmp','/etc':'private/etc'} if sys.platform=='darwin' else {}
+
+def trusted_system_link(path):
+    # macOS ships /var, /tmp and /etc as root-owned links into /private.
+    target=SYSTEM_LINKS.get(str(path))
+    if target is None:return False
+    info=os.lstat(path)
+    return info.st_uid==0 and os.readlink(path)==target
+
+
 def checked(path):
     path=Path(path).absolute()
     for parent in [path,*path.parents]:
-        if parent.is_symlink():raise ValueError('Symlink destination refused: '+str(parent))
+        if parent.is_symlink() and not trusted_system_link(parent):raise ValueError('Symlink destination refused: '+str(parent))
     if path.exists() and (not path.is_file() or path.stat().st_uid!=os.getuid()):
         raise ValueError('Target must be a regular user-owned file: '+str(path))
     return path
@@ -150,7 +162,7 @@ def apply(plan,home):
     # Only the backup subtree is private; do not chmod unrelated user config.
     for path in [backup.parent.parent.parent,backup.parent.parent,backup.parent]:
         for ancestor in [path,*path.parents]:
-            if ancestor.is_symlink():raise ValueError('Symlink backup directory refused')
+            if ancestor.is_symlink() and not trusted_system_link(ancestor):raise ValueError('Symlink backup directory refused')
         path.mkdir(parents=True,exist_ok=True,mode=0o700);path.chmod(0o700)
     data=(json.dumps(plan,indent=2)+'\n').encode()
     prior=read(backup)

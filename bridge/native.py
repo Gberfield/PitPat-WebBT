@@ -11,7 +11,7 @@ import stat
 import struct
 
 from .messages import load_json, validate_request
-from .platform_paths import peer_uid
+from .platform_paths import check_socket_path, peer_uid
 from .store import private_directory
 
 
@@ -51,6 +51,7 @@ class NativeServer:
         self.inode = None
 
     async def serve(self):
+        check_socket_path(self.path)
         if self.guard is None: self.guard = RuntimeLock(self.runtime)
         try:
             if self.path.is_symlink(): raise ValueError('Native socket must not be a symlink')

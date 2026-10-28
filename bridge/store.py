@@ -11,12 +11,14 @@ import sqlite3
 import stat
 import threading
 
+from .platform_paths import trusted_system_link
+
 
 def private_directory(path):
     path = Path(path).absolute()
     # Check every existing ancestor; never traverse a symlink supplied as state.
     for parent in reversed([path, *path.parents]):
-        if parent.is_symlink(): raise ValueError('Private path contains a symlink')
+        if parent.is_symlink() and not trusted_system_link(parent): raise ValueError('Private path contains a symlink')
     path.mkdir(parents=True, exist_ok=True, mode=0o700)
     info = path.stat()
     if info.st_uid != os.getuid() or not stat.S_ISDIR(info.st_mode):

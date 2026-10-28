@@ -4,6 +4,7 @@ from pathlib import Path
 
 DARWIN=sys.platform=='darwin'
 SUN_PATH_MAX=104 if DARWIN else 108
+SYSTEM_LINKS={'/var':'private/var','/tmp':'private/tmp','/etc':'private/etc'} if DARWIN else {}
 
 def boot_seconds():
     # Both clocks keep counting while the host sleeps.
@@ -36,3 +37,15 @@ def state_dir():
 
 def open_url_command(url):
     return ['open',url] if DARWIN else ['xdg-open',url]
+
+def trusted_system_link(path):
+    # macOS ships /var, /tmp and /etc as root-owned links into /private.
+    target=SYSTEM_LINKS.get(str(path))
+    if target is None:return False
+    info=os.lstat(path)
+    return info.st_uid==0 and os.readlink(path)==target
+
+def check_socket_path(path):
+    if len(os.fsencode(str(path)))>=SUN_PATH_MAX:
+        raise ValueError(f'Socket path too long for this OS ({SUN_PATH_MAX} bytes): {path}')
+    return path

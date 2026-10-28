@@ -4,6 +4,7 @@ from pathlib import Path
 from .messages import load_json
 from .safety_messages import Authority,MAX_FRAME
 from .safety_health import boot_seconds
+from .platform_paths import check_socket_path
 
 class SafetyClient:
     def __init__(self,runtime_dir,bridge_id):
@@ -39,7 +40,7 @@ class SafetyClient:
     async def open_once(self):
         if self.available:return
         if self.writer:await self.close()
-        self.reader,self.writer=await asyncio.wait_for(asyncio.open_unix_connection(str(self.runtime/'safety.sock'),limit=MAX_FRAME*4),3)
+        self.reader,self.writer=await asyncio.wait_for(asyncio.open_unix_connection(str(check_socket_path(self.runtime/'safety.sock')),limit=MAX_FRAME*4),3)
         self.send(dict(v=1,op='hello',kind='application',bridge_id=self.bridge_id))
         hello=load_json(await asyncio.wait_for(self.reader.readline(),3))
         if hello.get('event')!='authorized':raise ValueError('Safety authorization failed')
