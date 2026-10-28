@@ -6,11 +6,11 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from .platform_paths import open_url_command, runtime_dir
+from .platform_paths import check_socket_path, open_url_command, runtime_dir
 
 
 async def safety_stop(runtime):
-    reader,writer=await asyncio.wait_for(asyncio.open_unix_connection(str(runtime/'safety.sock')),2)
+    reader,writer=await asyncio.wait_for(asyncio.open_unix_connection(str(check_socket_path(runtime/'safety.sock'))),2)
     try:
         writer.write(b'{"v":1,"op":"hello","kind":"helper"}\n');await writer.drain()
         hello=json.loads(await asyncio.wait_for(reader.readline(),3))
