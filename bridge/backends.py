@@ -3,6 +3,10 @@ import asyncio
 
 from .protocol import SERVICE_UUID, NOTIFY_UUID, WRITE_UUID
 
+POWERED_OFF = 'Bluetooth is off. Turn it on in Control Center.'
+PERMISSION_DENIED = ('Bluetooth permission denied. Allow it in System Settings → Privacy & Security → '
+                     'Bluetooth for the app running PitPat.')
+
 
 class BleakBackend:
     def __init__(self):
@@ -11,7 +15,15 @@ class BleakBackend:
 
     async def discover(self, timeout):
         from bleak import BleakScanner
-        found = await BleakScanner.discover(timeout=timeout, return_adv=True, service_uuids=[SERVICE_UUID])
+        from bleak.exc import BleakBluetoothNotAvailableError, BleakBluetoothNotAvailableReason as Reason
+        try:
+            found = await BleakScanner.discover(timeout=timeout, return_adv=True, service_uuids=[SERVICE_UUID])
+        except BleakBluetoothNotAvailableError as exc:
+            if exc.reason == Reason.POWERED_OFF:
+                raise ValueError(POWERED_OFF) from None
+            if exc.reason in (Reason.DENIED_BY_USER, Reason.DENIED_BY_SYSTEM, Reason.DENIED_BY_UNKNOWN):
+                raise ValueError(PERMISSION_DENIED) from None
+            raise
         self.devices = {device.address: device for device, advert in found.values()
                         if SERVICE_UUID in [uuid.lower() for uuid in (advert.service_uuids or [])]}
         return [dict(id=key, name=device.name or 'PitPat treadmill') for key, device in self.devices.items()][:32]
