@@ -1,15 +1,12 @@
 """Deadlines use elapsed boot time, including host suspension."""
 import secrets
-import time
+from .platform_paths import boot_seconds
 
 CHALLENGE_INTERVAL=.25
 HEALTH_TIMEOUT=2.0
 TICK_INTERVAL=.05
 OWNER_TIMEOUT=6.0
 TELEMETRY_TIMEOUT=5.0
-
-def boot_seconds():
-    return time.clock_gettime(time.CLOCK_BOOTTIME)
 
 class HealthMonitor:
     def __init__(self,clock=boot_seconds):

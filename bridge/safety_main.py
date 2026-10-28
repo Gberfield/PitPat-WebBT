@@ -2,6 +2,7 @@
 import argparse,asyncio,os,signal
 from pathlib import Path
 from .native import RuntimeLock
+from .platform_paths import runtime_dir
 from .safety_core import SafetyCore
 from .safety_ipc import SafetyServer
 from .safety_health import boot_seconds
@@ -10,7 +11,7 @@ def main(argv=None):
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--simulate',action='store_true');p.add_argument('--runtime-dir',type=Path);p.add_argument('--state-dir',type=Path)
     args=p.parse_args(argv)
-    runtime=args.runtime_dir or Path(os.environ.get('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}'))/('pitpat-simulator' if args.simulate else 'pitpat')
+    runtime=args.runtime_dir or runtime_dir(args.simulate)
     boot_seconds()
     try:guard=RuntimeLock(runtime)
     except ValueError as exc:p.error(str(exc))

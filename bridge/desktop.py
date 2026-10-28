@@ -6,6 +6,7 @@ import os
 from pathlib import Path
 import subprocess
 import sys
+from .platform_paths import open_url_command, runtime_dir
 
 
 async def safety_stop(runtime):
@@ -44,9 +45,9 @@ def main(argv=None):
         elif args.operation=='start-pause':run(['omarchy-shell','gabe.pitpat','startPause'])
         elif args.operation=='stop':
             # One-shot authenticated Stop does not require the widget or its lease.
-            runtime=Path(os.environ.get('XDG_RUNTIME_DIR',f'/run/user/{os.getuid()}'))/'pitpat'
+            runtime=runtime_dir()
             asyncio.run(safety_stop(runtime))
-        else:run(['xdg-open','http://127.0.0.1:8766/'+('#history-panel' if args.operation=='history' else '')])
+        else:run(open_url_command('http://127.0.0.1:8766/'+('#history-panel' if args.operation=='history' else '')))
         return 0
     except (OSError,ValueError,TimeoutError,subprocess.SubprocessError) as exc:
         guidance='Stop unconfirmed. Use the physical stop control. ' if args.operation=='stop' else ''

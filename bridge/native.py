@@ -11,11 +11,8 @@ import stat
 import struct
 
 from .messages import load_json, validate_request
+from .platform_paths import peer_uid
 from .store import private_directory
-
-
-def peer_uid(sock):
-    return struct.unpack('3i', sock.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED, 12))[1]
 
 
 class RuntimeLock:
