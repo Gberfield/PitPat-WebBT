@@ -2,6 +2,7 @@
 import importlib.util
 import json
 from pathlib import Path
+import shutil
 import tempfile
 import unittest
 
@@ -63,6 +64,7 @@ class InstallTests(unittest.TestCase):
         plan['operations'][0]['path']=str(self.home/'unrelated')
         with self.assertRaises(ValueError):installer.apply(plan,self.home)
 
+    @unittest.skipUnless(shutil.which('systemd-analyze'),'systemd-analyze unavailable')
     def test_generated_unit_is_accepted_by_actual_systemd_parser(self):
         import subprocess
         plan=installer.plan(self.home,REPO)
