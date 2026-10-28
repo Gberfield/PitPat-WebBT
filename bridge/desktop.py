@@ -6,7 +6,10 @@ import os
 from pathlib import Path
 import subprocess
 import sys
-from .platform_paths import check_socket_path, open_url_command, runtime_dir
+from .platform_paths import DARWIN, check_socket_path, open_url_command, runtime_dir
+
+UID=os.getuid()
+LABELS=('com.gberfield.pitpat.safety','com.gberfield.pitpat.bridge')
 
 
 async def safety_stop(runtime):
@@ -34,19 +37,42 @@ def run(args):
         raise ValueError((result.stderr or result.stdout or 'Desktop command failed').strip())
 
 
+def start_services():
+    # Without -k, kickstart leaves a running service alone, like systemctl start.
+    if DARWIN:
+        for label in LABELS:run(['launchctl','kickstart',f'gui/{UID}/{label}'])
+    else:run(['systemctl','--user','start','pitpat-bridge.service'])
+
+
+def stop_services():
+    # Bridge first, then safety. A service that is not running counts as stopped, like systemctl stop.
+    if DARWIN:
+        for label in reversed(LABELS):
+            try:run(['launchctl','kill','SIGTERM',f'gui/{UID}/{label}'])
+            except ValueError as exc:
+                if 'No process to signal' not in str(exc):raise
+    else:
+        for unit in ('pitpat-bridge.service','pitpat-safety.service'):run(['systemctl','--user','stop',unit])
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description='PitPat Omarchy controls')
-    parser.add_argument('operation',choices=['controls','start-pause','stop','dashboard','history'])
+    parser.add_argument('operation',choices=['controls','start-pause','stop','services-stop','dashboard','history'])
     args=parser.parse_args(argv)
     try:
         if args.operation=='controls':
-            run(['systemctl','--user','start','pitpat-bridge.service'])
-            run(['omarchy-shell','shell','toggle','gabe.pitpat'])
-        elif args.operation=='start-pause':run(['omarchy-shell','gabe.pitpat','startPause'])
+            start_services()
+            run(['open','-b','com.gberfield.pitpat.menubar'] if DARWIN else ['omarchy-shell','shell','toggle','gabe.pitpat'])
+        elif args.operation=='start-pause':
+            # Start/Pause must come from the lease-holding motion owner.
+            run(['open','-g','pitpat://start-pause'] if DARWIN else ['omarchy-shell','gabe.pitpat','startPause'])
         elif args.operation=='stop':
             # One-shot authenticated Stop does not require the widget or its lease.
             runtime=runtime_dir()
             asyncio.run(safety_stop(runtime))
+        elif args.operation=='services-stop':
+            stop_services()
+            print('PitPat services stopped. This does not stop the belt; use Stop & Disconnect first.')
         else:run(open_url_command('http://127.0.0.1:8766/'+('#history-panel' if args.operation=='history' else '')))
         return 0
     except (OSError,ValueError,TimeoutError,subprocess.SubprocessError) as exc:
