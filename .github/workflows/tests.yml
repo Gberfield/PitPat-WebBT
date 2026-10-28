@@ -1,0 +1,25 @@
+name: tests
+on:
+  push:
+    branches: [mac-compat, 'mac/**']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '22' }
+      - uses: astral-sh/setup-uv@v6
+      - run: uv sync --locked
+      - run: node --test --test-isolation=none
+      - run: node --check treadmill.js
+      - run: uv run --frozen python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: uv lock --check
+      - run: git diff --check HEAD~1 || true
