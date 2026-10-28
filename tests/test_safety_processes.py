@@ -23,7 +23,8 @@ class ProcessTests(unittest.IsolatedAsyncioTestCase):
         deadline=asyncio.get_running_loop().time()+3
         while True:
             view=await self.pair.app_request('observe')
-            if view['safety_available'] and view['fault_id']==fault:break
+            # The walk record turns interrupted after the recorder's own save.
+            if view['safety_available'] and view['fault_id']==fault and (view.get('session') or {}).get('status')=='interrupted':break
             self.assertLess(asyncio.get_running_loop().time(),deadline,
                             'Resumed application did not expose safety recovery without discovery')
             await asyncio.sleep(.05)
