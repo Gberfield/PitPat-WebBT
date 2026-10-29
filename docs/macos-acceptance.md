@@ -1,13 +1,16 @@
 # macOS support: acceptance checklist
 
-Date: October 28, 2026 (EDT).
+Date: October 28, 2026 (EDT); physical results October 29, 2026 (EDT).
 
 Status: software acceptance complete in simulator mode on one Mac (Apple Silicon,
-macOS 27, Python via uv, Node 24 in CI). **Physical acceptance has not started.**
-Nothing here has connected to, scanned for, started or stopped a real treadmill.
+macOS 27, Python via uv, Node 24 in CI). Physical acceptance by the owner on the
+same Mac passed every item except Mac sleep, which was not run because system
+sleep is disabled on that Mac. The software items ran in simulator mode only; the
+physical items were run by the owner, with the implementer sending the crash and
+freeze signals at the owner's request.
 
-Scope: the `mac-compat` work packages in [docs/mac](mac/README.md) (PRs #12–#18 and
-this checklist). Linux behavior is unchanged; the Linux checklists remain
+Scope: the `mac-compat` work packages in [docs/mac](mac/README.md) (PRs #12–#19),
+and the Swift safety launcher (#21). Linux behavior is unchanged; the Linux checklists remain
 [dedicated safety acceptance](dedicated-safety-acceptance.md) and
 [Omarchy controls acceptance](omarchy-controls-acceptance.md).
 
@@ -34,9 +37,8 @@ Every item below ran with `--simulate` or disposable homes only.
   `safety.sock` returned confirmed Stop during a simulated walk. With no treadmill
   connected, `pitpat stop` reports **Stop unconfirmed** (exit 1) and the next
   connection starts in recovery, as on Linux.
-- [ ] Simulator walk via hotkeys: **not run**. This session could not post global
-  key events or take screenshots. The hotkey actions call the same code the
-  simulator test exercises; the key registration itself is unverified.
+- [x] Hotkeys: **not run in simulator mode** (this session could not post global
+  key events). Covered on October 29, 2026 by the physical hotkey item below.
 - [x] Recovery after `kill -STOP` of the bridge: with the menu bar walking, the
   bridge was frozen; the controller-lost warning and timeout error appeared; after
   `kill -CONT` it reconnected into recovery, claimed recovery, resolved the record
@@ -48,10 +50,10 @@ Every item below ran with `--simulate` or disposable homes only.
   while running; after `pitpat services-stop` and `launchctl bootout`, rollback
   left `~/Library/LaunchAgents`, `~/Applications` and `~/.local/bin` byte-identical
   to the pre-install listing, and kept logs, walks and state.
-- [ ] `pitpat controls` / `pitpat start-pause` routing to an app in `~/Applications`:
-  **not covered.** LaunchServices does not register apps under `/private/tmp`, so
-  the throwaway install could not receive `open -b` or `pitpat://` URLs. Both
-  worked from the build copy during the menu bar work (#17).
+- [x] `pitpat controls` / `pitpat start-pause` routing to an app in `~/Applications`:
+  not covered by the throwaway install (LaunchServices does not register apps
+  under `/private/tmp`). Covered on October 29, 2026 by the real-home install:
+  `pitpat controls` started both agents and opened `~/Applications/PitPat.app`.
 
 ## Physical (owner only)
 
@@ -59,29 +61,38 @@ Run only with the belt clear and the physical stop control within reach. Record
 date, time (America/New_York) and what happened for each item, including
 failures. Do not check an item that was not physically observed.
 
-- [ ] Install on the real home (`plan`, `apply --manifest`, the printed
-  `launchctl bootstrap` and `open` steps); `pitpat controls` opens the popover.
-  October 29, 2026, with the script launcher (before #20): apply, both bootstraps
-  and `pitpat controls` worked; both agents ran and the menu bar app opened from
-  `~/Applications`. Repeat with the Swift launcher.
-- [ ] Bluetooth permission prompt names **PitPat Safety** on first Connect;
-  allowing it lets discovery find the treadmill. October 29, 2026, script
-  launcher: **failed.** Privacy & Security → Bluetooth listed only `python3.14`;
-  the script `exec`s Python, so macOS credited Python. Fixed by the Swift
-  launcher (#20); repeat after reinstalling.
-- [ ] Connect and telemetry without Start: readings update; the belt does not move.
-  October 29, 2026, script launcher: owner observed Connect and updating readings;
-  Start was not pressed. Repeat with the Swift launcher.
-- [ ] Start at minimum speed from the menu bar, then Stop from the menu bar;
-  Stop is confirmed.
-- [ ] Stop via ⌃⌥⌘. during a minimum-speed walk; Stop is confirmed.
-- [ ] Application-crash stop on an empty belt: `kill -9` the bridge mid-walk; the
-  safety process stops the belt. Record the time to stop.
-- [ ] Application-freeze stop: `kill -STOP` the bridge mid-walk; the belt stops;
-  after `kill -CONT` recovery is required and nothing restarts motion.
+- [x] Install on the real home (`plan`, `apply --manifest`, the printed
+  `launchctl bootstrap` steps); `pitpat controls` opens the popover. First with the
+  script launcher (before #20), then again after #21 with the Swift launcher: both
+  apps passed `codesign --verify --deep --strict`, both agents loaded as not
+  running, and `pitpat controls` started both and opened the menu bar app.
+- [x] Bluetooth permission prompt names **PitPat Safety** on first Connect;
+  allowing it lets discovery find the treadmill. Script launcher: **failed**;
+  Privacy & Security → Bluetooth listed only `python3.14`, because the script
+  `exec`s Python and macOS credited Python (#20). Swift launcher (#21): the
+  prompt named **PitPat Safety**, and Connect found the treadmill.
+- [x] Connect and telemetry without Start: readings updated; the belt did not
+  move. Observed with both launchers.
+- [x] Start at minimum speed from the menu bar, then Stop from the menu bar;
+  Stop confirmed. The owner then walked a session controlled over Bluetooth.
+- [x] Stop via ⌃⌥⌘. during a minimum-speed walk: Stop confirmed. ⌃⌥⌘Space
+  started and paused the belt; ⌃⌥⌘P opened the popover.
+- [x] Application-crash stop on an empty belt (1.0 mph, 0 steps): `kill -9` of the
+  bridge at 3:33:35 PM; the safety process kept running and the belt stopped.
+  Time to stop was not measured. The next Connect required confirming Stop and
+  acknowledging recovery.
+- [x] Application-freeze stop on an empty belt (1.0 mph, 0 steps): `kill -STOP`
+  of the bridge at 3:44:55 PM. The safety process recorded `Application health
+  expired` with outcome `stopped_confirmed`. After `kill -CONT` at 3:45:10 PM the
+  bridge was connected, in recovery and blocked, at speed 0 with the walk marked
+  interrupted; nothing restarted motion.
 - [ ] Mac sleep during a walk (lid close or Apple menu → Sleep): **expected: not
-  guaranteed.** Record what the belt did and what the app showed on wake. Do not
-  claim support from one result.
-- [ ] Rollback on the real home: Stop & Disconnect, `pitpat services-stop`,
-  `launchctl bootout` both labels, `rollback --manifest`; compare against a
-  listing taken before the install.
+  guaranteed.** **Not run:** system sleep is disabled on this Mac. Run once
+  wherever sleep is enabled; do not claim support from one result. App Nap is also
+  unverified.
+- [x] Rollback on the real home: after Stop & Disconnect (bridge reported
+  disconnected), `pitpat services-stop`, `launchctl bootout` both labels and
+  `rollback --manifest` removed `~/Applications` and every PitPat file in
+  `~/Library/LaunchAgents`, and kept logs, walks and state. Checked by listing,
+  not against a byte listing taken before the install. The rolled-back manifest
+  was kept as `install-macos.rolled-back-20261029.json`.
