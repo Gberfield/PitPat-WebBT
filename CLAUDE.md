@@ -7,8 +7,9 @@
   exist here. This project is not yet enrolled in
   `~/Library/Application Support/CodexKnowledge/mapping.json` (enrollment is done
   in the Codex app), so work from the repository sources.
-- Active branch for Mac work: `mac-compat` (based on `codex/dedicated-safety`).
-  The implementation plans are in `docs/mac/`. Start with `docs/mac/README.md`.
+- macOS support is merged into `main` (via `mac-compat` → `codex/dedicated-safety`
+  → `main`, October 2026). Branch new work from `main`. Plans are in `docs/mac/`;
+  results are in `docs/macos-acceptance.md`.
 - Safety boundary: never arm, run or simulate physical treadmill tests without
   the user's explicit go-ahead in chat. Use `--simulate` for all automated work.
 - Checks:
