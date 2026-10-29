@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>Label</key><string>com.gberfield.pitpat.bridge</string>
+  <key>ProgramArguments</key><array>
+    <string>@PYTHON@</string>
+    <string>-u</string>
+    <string>-m</string>
+    <string>bridge</string>
+    <string>--port</string>
+    <string>8766</string>
+  </array>
+  <key>WorkingDirectory</key><string>@REPO@</string>
+  <key>RunAtLoad</key><false/>
+  <key>Umask</key><integer>63</integer>
+  <key>ExitTimeOut</key><integer>35</integer>
+  <key>ProcessType</key><string>Interactive</string>
+  <key>StandardOutPath</key><string>@LOGS@/bridge.log</string>
+  <key>StandardErrorPath</key><string>@LOGS@/bridge.log</string>
+</dict></plist>

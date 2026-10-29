@@ -6,44 +6,22 @@ any write, then recheck each target immediately before its atomic replacement.
 No service management, login enablement, desktop reload or data deletion here.
 """
 import argparse
-import base64
 from datetime import datetime
-import hashlib
 import json
-import os
 from pathlib import Path
 import re
 import secrets
 import shlex
-import stat
-import tempfile
+import sys
 from zoneinfo import ZoneInfo
+
+sys.path.insert(0,str(Path(__file__).resolve().parent))
+from install_common import atomic,checked,digest,packed,preflight,read,trusted_system_link,unpacked
 
 PLUGIN_FILES=('manifest.json','Service.qml','Widget.qml','Model.js')
 STATIC_PATHS=('.config/omarchy/shell.json','.config/hypr/bindings.lua',
               '.config/systemd/user/pitpat-bridge.service','.local/bin/pitpat',
               '.local/share/applications/pitpat.desktop')
-
-
-def checked(path):
-    path=Path(path).absolute()
-    for parent in [path,*path.parents]:
-        if parent.is_symlink():raise ValueError('Symlink destination refused: '+str(parent))
-    if path.exists() and (not path.is_file() or path.stat().st_uid!=os.getuid()):
-        raise ValueError('Target must be a regular user-owned file: '+str(path))
-    return path
-
-
-def read(path):
-    path=checked(path)
-    return path.read_bytes() if path.exists() else None
-
-
-def digest(value):return hashlib.sha256(value).hexdigest() if value is not None else None
-
-def packed(value):return base64.b64encode(value).decode() if value is not None else None
-
-def unpacked(value):return base64.b64decode(value,validate=True) if value is not None else None
 
 
 def allowed(home,version=2):
@@ -117,40 +95,13 @@ def validate(plan,home):
         if item['after'] is None or type(item['mode']) is not int or not 0<=item['mode']<=0o777:raise ValueError('Invalid install mode/payload')
 
 
-def atomic(path,data,mode):
-    path=checked(path)
-    path.parent.mkdir(parents=True,exist_ok=True)
-    if data is None:
-        if path.exists():path.unlink()
-        return
-    fd,tmp=tempfile.mkstemp(prefix='.pitpat-',dir=path.parent)
-    try:
-        os.fchmod(fd,mode)
-        with os.fdopen(fd,'wb') as stream:
-            stream.write(data);stream.flush();os.fsync(stream.fileno())
-        os.replace(tmp,path)
-        directory_fd=os.open(path.parent,os.O_DIRECTORY)
-        try:os.fsync(directory_fd)
-        finally:os.close(directory_fd)
-    finally:
-        if os.path.exists(tmp):os.unlink(tmp)
-
-
-def preflight(plan,rollback=False):
-    for item in plan['operations']:
-        current=digest(read(item['path']))
-        acceptable=(item['before_sha256'],item['after_sha256'])
-        if current not in acceptable:raise ValueError('File drift; no files changed: '+item['path'])
-        # Restoring untouched preimages is idempotent; edited postimages hold all restoration.
-
-
 def apply(plan,home):
     validate(plan,home);preflight(plan)
     backup=Path(home)/'.local/state/pitpat/install-backups'/plan['id']/'manifest.json'
     # Only the backup subtree is private; do not chmod unrelated user config.
     for path in [backup.parent.parent.parent,backup.parent.parent,backup.parent]:
         for ancestor in [path,*path.parents]:
-            if ancestor.is_symlink():raise ValueError('Symlink backup directory refused')
+            if ancestor.is_symlink() and not trusted_system_link(ancestor):raise ValueError('Symlink backup directory refused')
         path.mkdir(parents=True,exist_ok=True,mode=0o700);path.chmod(0o700)
     data=(json.dumps(plan,indent=2)+'\n').encode()
     prior=read(backup)

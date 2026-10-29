@@ -104,6 +104,100 @@ See [acceptance evidence](docs/firefox-bridge-acceptance.md) and the
 simulation does not establish physical BA09-B acceptance.
 
 
+## macOS
+
+Chrome and Edge on macOS include Web Bluetooth, so the static Chromium route below
+works unchanged. Safari and Firefox on macOS do not; use the local bridge.
+
+The foreground bridge uses the same commands as Linux:
+
+```sh
+uv sync --locked
+uv run --frozen python -m bridge.safety_main
+```
+
+In a second terminal:
+
+```sh
+uv run --frozen python -m bridge --port 8766
+```
+
+The safety process is the only Bluetooth owner. On first connect, macOS asks
+whether the terminal app running it may use Bluetooth. If it is denied, Connect
+reports **Bluetooth permission denied** with the System Settings location. To test without hardware, use the same
+`--simulate` commands and [simulator dashboard](http://127.0.0.1:8767/) as Linux.
+
+macOS paths:
+
+| Purpose | Path |
+| --- | --- |
+| IPC sockets | `~/Library/Application Support/PitPat/run/pitpat` (simulator: `pitpat-simulator`) |
+| Walks and state | `~/Library/Application Support/PitPat/state` |
+| Installed service logs | `~/Library/Logs/PitPat/` |
+
+### Installed services and menu bar app
+
+Build the menu bar app and the PitPat Safety launcher, then preview and apply the
+per-user installation:
+
+```sh
+scripts/build-menubar.sh
+uv run --frozen python scripts/install-macos.py plan
+uv run --frozen python scripts/install-macos.py apply --manifest ~/.local/state/pitpat/install-macos.json
+```
+
+`plan` writes nothing. `apply` installs two launchd agents in
+`~/Library/LaunchAgents`, `PitPat Safety.app` and `PitPat.app` in
+`~/Applications`, and `~/.local/bin/pitpat`. It ad-hoc signs both apps and records
+exact per-file backups in the manifest. It refuses drift and never uses sudo,
+`/Library` or login items. It prints, but does not run, the next steps:
+
+```sh
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.gberfield.pitpat.safety.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.gberfield.pitpat.bridge.plist
+open ~/Applications/PitPat.app
+```
+
+Bootstrapping loads the agents without starting them. They start on demand only:
+`pitpat controls` starts both and opens the menu bar app. Opening the app alone
+does not start them. They have no automatic restart and are not started at login. With the installed safety process, macOS asks
+for Bluetooth permission for **PitPat Safety** rather than for a terminal or Python:
+the app's small launcher starts the safety process as its child, so macOS credits
+the signed app. Each install re-signs the app, so macOS may ask again after one.
+
+The PitPat menu bar item replaces the Omarchy tray popup with the same controls
+and wording. Closing its popover retains control; **Quit PitPat menu bar**
+releases it. Hotkeys:
+
+| Keys | Action |
+| --- | --- |
+| ⌃⌥⌘P | Open the controls popover |
+| ⌃⌥⌘Space | Start/Pause through the menu bar owner, like `pitpat start-pause` |
+| ⌃⌥⌘. | Stop through the safety process, like `pitpat stop` |
+
+Stop and `pitpat stop` go straight to the safety process, without the bridge or
+the menu bar lease. If either reports Stop unconfirmed, use the physical stop
+control. With no treadmill connected, Stop cannot be confirmed and reports so. `pitpat dashboard` and `pitpat history` open the dashboard.
+
+The safety limits described above apply unchanged: Stop on application crash or
+freeze depends on the safety process and the Bluetooth link staying alive; radio
+loss, power loss and failure of the safety process cannot guarantee Stop; this is
+not a hardware safety interlock. In addition, **macOS sleep, lid close and App Nap
+are not verified**. Keep the physical stop control available.
+
+To roll back, choose **Stop & Disconnect** first, then:
+
+```sh
+pitpat services-stop
+launchctl bootout gui/$(id -u)/com.gberfield.pitpat.bridge
+launchctl bootout gui/$(id -u)/com.gberfield.pitpat.safety
+uv run --frozen python scripts/install-macos.py rollback --manifest ~/.local/state/pitpat/install-macos.json
+```
+
+`services-stop` does not stop the belt. Rollback refuses while either service is
+running or loaded and restores the previous bytes of every installed file. It
+keeps logs, walks and state. See the [macOS acceptance checklist](docs/macos-acceptance.md).
+
 ## Live Demo
 
 [https://keirany.github.io/PitPat-WebBT/](https://keirany.github.io/PitPat-WebBT/)

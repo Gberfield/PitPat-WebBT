@@ -2,6 +2,7 @@
 import asyncio,contextlib,json,os,stat
 from pathlib import Path
 from .native import RuntimeLock,peer_uid
+from .platform_paths import check_socket_path
 from .messages import load_json
 from .safety_messages import validate_frame,identifier,MAX_FRAME,MAX_PENDING
 from .safety_health import CHALLENGE_INTERVAL,TICK_INTERVAL
@@ -12,6 +13,7 @@ class SafetyServer:
         self.guard=guard;self.server=None;self.tasks=set();self.writers=set();self.application=None
         self.ticker=None;self.inode=None
     async def serve(self):
+        check_socket_path(self.path)
         if self.guard is None:self.guard=RuntimeLock(self.runtime)
         if self.path.is_symlink():raise ValueError('Unsafe socket')
         if self.path.exists():
