@@ -76,7 +76,8 @@ def main(argv=None):
         else:run(open_url_command('http://127.0.0.1:8766/'+('#history-panel' if args.operation=='history' else '')))
         return 0
     except (OSError,ValueError,TimeoutError,subprocess.SubprocessError) as exc:
-        guidance='Stop unconfirmed. Use the physical stop control. ' if args.operation=='stop' else ''
+        # Safety's own unconfirmed-Stop messages already carry the guidance.
+        guidance='Stop unconfirmed. Use the physical stop control. ' if args.operation=='stop' and 'Stop unconfirmed' not in str(exc) else ''
         print('PitPat: '+guidance+str(exc),file=sys.stderr)
         return 1
 

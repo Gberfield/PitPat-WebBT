@@ -58,6 +58,13 @@ class PlatformRoutingTests(unittest.TestCase):
         with patch('bridge.desktop.DARWIN',True),patch('bridge.desktop.subprocess.run',return_value=failed),contextlib.redirect_stderr(io.StringIO()) as err:
             self.assertEqual(main(['services-stop']),1)
         self.assertIn('Could not find service',err.getvalue())
+    def test_stop_failure_prints_the_guidance_once(self):
+        for error,expected in ((ValueError('Stop unconfirmed. Use the physical stop control.'),'PitPat: Stop unconfirmed. Use the physical stop control.\n'),
+                               (FileNotFoundError('no socket'),'PitPat: Stop unconfirmed. Use the physical stop control. no socket\n')):
+            with patch('bridge.desktop.safety_stop',side_effect=error),patch('sys.stderr',new_callable=io.StringIO) as err:
+                self.assertEqual(main(['stop']),1)
+            self.assertEqual(err.getvalue(),expected)
+
     def test_macos_stop_still_goes_straight_to_safety_socket(self):
         with patch('bridge.desktop.DARWIN',True),patch('bridge.desktop.safety_stop') as stop,patch('bridge.desktop.subprocess.run') as run:
             stop.return_value=None
