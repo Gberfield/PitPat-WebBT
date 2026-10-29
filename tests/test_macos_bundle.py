@@ -14,8 +14,8 @@ class SafetyBundleTests(unittest.TestCase):
                               CFBundlePackageType='APPL', LSUIElement=True, LSMinimumSystemVersion='13.0'))
         self.assertIn('Stop', info['NSBluetoothAlwaysUsageDescription'])
 
-    def test_executable_is_placeholder_template_for_safety_process_only(self):
-        script = APP/'MacOS/pitpat-safety'
+    def test_launched_script_is_placeholder_template_for_safety_process_only(self):
+        script = APP/'Resources/pitpat-safety'
         self.assertTrue(os.access(script, os.X_OK))
         text = script.read_text()
         self.assertIn('cd @REPO_SHELL@ || exit 1', text)

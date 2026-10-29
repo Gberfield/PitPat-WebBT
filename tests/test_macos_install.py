@@ -28,6 +28,7 @@ class MacInstallTests(unittest.TestCase):
         executable=self.menubar/'Contents/MacOS/PitPatMenuBar';executable.parent.mkdir(parents=True)
         shutil.copy(REPO/'integration/macos/PitPatMenuBar/Info.plist',self.menubar/'Contents/Info.plist')
         executable.write_text('#!/bin/sh\nexit 0\n');executable.chmod(0o755)
+        self.launcher=self.root/'build/PitPatSafety';self.launcher.write_text('#!/bin/sh\nexit 0\n');self.launcher.chmod(0o755)
         (self.home/'Library/Logs').mkdir(parents=True)
         self.bin=self.home/'.local/bin';self.bin.mkdir(parents=True);(self.bin/'other').write_text('keep')
         self.manifest=self.root/'manifest.json'
@@ -35,7 +36,7 @@ class MacInstallTests(unittest.TestCase):
 
     def tearDown(self):self.temp.cleanup()
 
-    def plan(self):return installer.plan(self.home,REPO,self.menubar)
+    def plan(self):return installer.plan(self.home,REPO,self.menubar,self.launcher)
 
     def apply(self):
         plan=self.plan();installer.apply(plan,self.home,self.manifest,SIGNER);return plan
@@ -47,19 +48,21 @@ class MacInstallTests(unittest.TestCase):
         plan=self.plan()
         self.assertEqual(snapshot(self.home),self.before)
         for item in plan['operations']:
-            if not item['path'].endswith('PitPatMenuBar'):self.assertIsNone(installer.PLACEHOLDER.search(installer.unpacked(item['after'])),item['path'])
+            if not item['path'].endswith(('PitPatMenuBar','MacOS/pitpat-safety')):self.assertIsNone(installer.PLACEHOLDER.search(installer.unpacked(item['after'])),item['path'])
         bridge=plistlib.loads(installer.unpacked(plan['operations'][1]['after']))
         self.assertEqual(bridge['ProgramArguments'][0],str(REPO/'.venv/bin/python'))
         self.assertEqual(bridge['StandardOutPath'],str(self.home/'Library/Logs/PitPat/bridge.log'))
         safety=plistlib.loads(installer.unpacked(plan['operations'][0]['after']))
         self.assertEqual(safety['ProgramArguments'],[str(self.home/'Applications/PitPat Safety.app/Contents/MacOS/pitpat-safety')])
+        script=next(item for item in plan['operations'] if item['path'].endswith('Resources/pitpat-safety'))
+        self.assertIn('-m bridge.safety_main',installer.unpacked(script['after']).decode())
         self.assertIn('Next steps (not run):',installer.next_steps(self.home))
 
     def test_apply_creates_targets_with_modes_and_rollback_restores_exactly(self):
         self.apply()
         modes={'Library/LaunchAgents/com.gberfield.pitpat.safety.plist':0o644,'Library/LaunchAgents/com.gberfield.pitpat.bridge.plist':0o644,
                '.local/bin/pitpat':0o755,'Applications/PitPat Safety.app/Contents/Info.plist':0o644,
-               'Applications/PitPat Safety.app/Contents/MacOS/pitpat-safety':0o755,
+               'Applications/PitPat Safety.app/Contents/MacOS/pitpat-safety':0o755,'Applications/PitPat Safety.app/Contents/Resources/pitpat-safety':0o755,
                'Applications/PitPat.app/Contents/Info.plist':0o644,'Applications/PitPat.app/Contents/MacOS/PitPatMenuBar':0o755}
         for path,mode in modes.items():self.assertEqual((self.home/path).stat().st_mode&0o777,mode,path)
         self.assertEqual((self.home/'Library/Logs/PitPat').stat().st_mode&0o777,0o700)
@@ -125,4 +128,5 @@ class MacInstallTests(unittest.TestCase):
         self.assertFalse((self.home/'Applications').exists())
 
     def test_unbuilt_menu_bar_app_refuses(self):
-        with self.assertRaises(ValueError):installer.plan(self.home,REPO,self.root/'missing.app')
+        with self.assertRaises(ValueError):installer.plan(self.home,REPO,self.root/'missing.app',self.launcher)
+        with self.assertRaises(ValueError):installer.plan(self.home,REPO,self.menubar,self.root/'missing')

@@ -6,6 +6,7 @@ let package = Package(
     platforms: [.macOS(.v13)],
     targets: [
         .executableTarget(name: "PitPatMenuBar"),
+        .executableTarget(name: "PitPatSafety"),
         .testTarget(name: "PitPatMenuBarTests", dependencies: ["PitPatMenuBar"]),
     ]
 )

@@ -20,6 +20,8 @@ jobs:
       - run: uv sync --locked
       - run: node --test --test-isolation=none
       - run: node --check treadmill.js
+      - if: runner.os == 'macOS'
+        run: scripts/build-menubar.sh
       - run: uv run --frozen python -m unittest discover -s tests -p 'test_*.py' -v
       - run: uv lock --check
       - if: runner.os == 'macOS'
