@@ -28,10 +28,11 @@ LABELS=('com.gberfield.pitpat.safety','com.gberfield.pitpat.bridge')
 STATIC=tuple(f'Library/LaunchAgents/{label}.plist' for label in LABELS)+('.local/bin/pitpat',)
 SAFETY_APP='Applications/PitPat Safety.app'
 MENUBAR_APP='Applications/PitPat.app'
-BUNDLES={SAFETY_APP:('Contents/Info.plist','Contents/MacOS/pitpat-safety'),
+BUNDLES={SAFETY_APP:('Contents/Info.plist','Contents/MacOS/pitpat-safety','Contents/Resources/pitpat-safety'),
          MENUBAR_APP:('Contents/Info.plist','Contents/MacOS/PitPatMenuBar')}
 SIGNATURE='Contents/_CodeSignature'
 MENUBAR_BUILD='integration/macos/PitPatMenuBar/.build/PitPat.app'
+LAUNCHER_BUILD='integration/macos/PitPatMenuBar/.build/PitPatSafety'
 LOGS='Library/Logs/PitPat'
 PLACEHOLDER=re.compile(rb'@[A-Z_]+@')
 
@@ -76,10 +77,11 @@ def bundle_files(home,bundle):
     return files
 
 
-def plan(home,repo,menubar=None):
+def plan(home,repo,menubar=None,launcher=None):
     home,repo=Path(home).absolute(),Path(repo).absolute()
-    menubar=Path(menubar or repo/MENUBAR_BUILD).absolute()
-    if not (menubar/'Contents/MacOS/PitPatMenuBar').is_file():raise ValueError('Menu bar app not built; run scripts/build-menubar.sh first: '+str(menubar))
+    menubar=Path(menubar or repo/MENUBAR_BUILD).absolute();launcher=Path(launcher or repo/LAUNCHER_BUILD).absolute()
+    for built in (menubar/'Contents/MacOS/PitPatMenuBar',launcher):
+        if not built.is_file():raise ValueError('Menu bar app or safety launcher not built; run scripts/build-menubar.sh first: '+str(built))
     for path in tree(menubar):
         relative=path.relative_to(menubar)
         if str(relative) not in BUNDLES[MENUBAR_APP] and relative.parent!=Path(SIGNATURE):
@@ -96,11 +98,13 @@ def plan(home,repo,menubar=None):
     outputs={home/STATIC[0]:(plist(LABELS[0]),0o644),home/STATIC[1]:(plist(LABELS[1]),0o644),
              home/STATIC[2]:(shell(repo/'integration/bin/pitpat'),0o755),
              home/SAFETY_APP/'Contents/Info.plist':((safety/'Info.plist').read_bytes(),0o644),
-             home/SAFETY_APP/'Contents/MacOS/pitpat-safety':(shell(safety/'MacOS/pitpat-safety'),0o755),
+             home/SAFETY_APP/'Contents/MacOS/pitpat-safety':(launcher.read_bytes(),0o755),
+             home/SAFETY_APP/'Contents/Resources/pitpat-safety':(shell(safety/'Resources/pitpat-safety'),0o755),
              home/MENUBAR_APP/'Contents/Info.plist':((menubar/'Contents/Info.plist').read_bytes(),0o644),
              home/MENUBAR_APP/'Contents/MacOS/PitPatMenuBar':((menubar/'Contents/MacOS/PitPatMenuBar').read_bytes(),0o755)}
+    binaries={home/MENUBAR_APP/'Contents/MacOS/PitPatMenuBar',home/SAFETY_APP/'Contents/MacOS/pitpat-safety'}
     for path,(data,_) in outputs.items():
-        if not path.name=='PitPatMenuBar' and PLACEHOLDER.search(data):raise ValueError('Unfilled placeholder in '+str(path))
+        if path not in binaries and PLACEHOLDER.search(data):raise ValueError('Unfilled placeholder in '+str(path))
     # A previous signature is replaced when apply signs again.
     for bundle in BUNDLES:
         for path in bundle_files(home,bundle):outputs.setdefault(path,(None,0o644))
@@ -229,15 +233,16 @@ def main():
     for name in ('plan','apply'):
         command=commands.add_parser(name,parents=[common])
         command.add_argument('--menubar-app',type=Path,help='Built PitPat.app (default: scripts/build-menubar.sh output)')
+        command.add_argument('--safety-launcher',type=Path,help='Built PitPatSafety launcher (default: scripts/build-menubar.sh output)')
         if name=='apply':command.add_argument('--manifest',type=Path,required=True)
     command=commands.add_parser('rollback',parents=[common])
     command.add_argument('--manifest',type=Path,required=True);command.add_argument('--force-while-loaded',action='store_true')
     args=parser.parse_args()
     repo=Path(__file__).resolve().parent.parent
     try:
-        if args.command=='plan':print(describe(plan(args.home,repo,args.menubar_app)))
+        if args.command=='plan':print(describe(plan(args.home,repo,args.menubar_app,args.safety_launcher)))
         elif args.command=='apply':
-            result=plan(args.home,repo,args.menubar_app);apply(result,args.home,args.manifest)
+            result=plan(args.home,repo,args.menubar_app,args.safety_launcher);apply(result,args.home,args.manifest)
             print('Applied '+str(len(result['operations']))+' file operations. Manifest: '+str(args.manifest)+'\n'+next_steps(result['home']))
         else:
             kept=rollback(json.loads(checked(args.manifest).read_text()),args.home,args.force_while_loaded)

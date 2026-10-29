@@ -61,9 +61,17 @@ failures. Do not check an item that was not physically observed.
 
 - [ ] Install on the real home (`plan`, `apply --manifest`, the printed
   `launchctl bootstrap` and `open` steps); `pitpat controls` opens the popover.
+  October 29, 2026, with the script launcher (before #20): apply, both bootstraps
+  and `pitpat controls` worked; both agents ran and the menu bar app opened from
+  `~/Applications`. Repeat with the Swift launcher.
 - [ ] Bluetooth permission prompt names **PitPat Safety** on first Connect;
-  allowing it lets discovery find the treadmill.
+  allowing it lets discovery find the treadmill. October 29, 2026, script
+  launcher: **failed.** Privacy & Security → Bluetooth listed only `python3.14`;
+  the script `exec`s Python, so macOS credited Python. Fixed by the Swift
+  launcher (#20); repeat after reinstalling.
 - [ ] Connect and telemetry without Start: readings update; the belt does not move.
+  October 29, 2026, script launcher: owner observed Connect and updating readings;
+  Start was not pressed. Repeat with the Swift launcher.
 - [ ] Start at minimum speed from the menu bar, then Stop from the menu bar;
   Stop is confirmed.
 - [ ] Stop via ⌃⌥⌘. during a minimum-speed walk; Stop is confirmed.

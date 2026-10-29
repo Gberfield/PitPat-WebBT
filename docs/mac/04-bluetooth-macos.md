@@ -74,6 +74,10 @@ CoreBluetooth. The code is mostly portable, but macOS differs in ways that matte
    version first; do not build the Swift launcher unless the owner's test shows
    it is needed.
 
+   **Answered October 29, 2026:** it does not. The owner's first Connect put only
+   `python3.14` under Privacy & Security → Bluetooth. The Swift launcher was built
+   in #20 (`Sources/PitPatSafety`); the script moved to `Contents/Resources`.
+
 ## Owner-run hardware check (implementer: do not perform)
 
 Write these steps into the PR description; the owner runs them:
