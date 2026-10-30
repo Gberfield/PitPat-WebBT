@@ -1,7 +1,8 @@
 # Documentation
 
 This repository is the complete record for PitPat. There is no separate project
-wiki to consult or keep in sync.
+wiki to consult or keep in sync. For the current state and optional work, read
+[project status](STATUS.md).
 
 ## Using it
 

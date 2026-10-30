@@ -6,7 +6,8 @@
   was written for the Linux/Omarchy host; its `/home/gabe/...` wiki paths do not
   exist here. By the owner's decision (October 30, 2026), this project has no wiki:
   the repository is the complete record. Do not enroll it. Keep documentation in
-  the repo, starting from `docs/README.md`.
+  the repo, starting from `docs/README.md`. Current state and optional
+  work are in `docs/STATUS.md`; keep it up to date.
 - macOS support is merged into `main` (via `mac-compat` → `codex/dedicated-safety`
   → `main`, October 2026). Branch new work from `main`. Plans are in `docs/mac/`;
   results are in `docs/macos-acceptance.md`; upkeep is in `docs/macos-operations.md`.
