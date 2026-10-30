@@ -1,6 +1,8 @@
 
 ## Local project LLM wiki
 
+Exception (October 30, 2026): on macOS this project has no wiki. The repository is the complete record; start from `docs/README.md`. The rules below apply only where the Linux wiki exists.
+
 - Read `wiki/index.md` and the relevant linked pages before material work in this project. The wiki is a derived synthesis; current governing instructions, specifications, source code and evidence retain authority.
 - During authorized project work, maintain `wiki/architecture.md`, `wiki/decisions.md`, `wiki/open-questions.md`, `wiki/sources.md` and `wiki/log.md` when material findings change. Record reasons, source links, dated verification, contradictions and explicit unknowns; preserve historical decisions with supersession rather than silently replacing them. Do not produce a session transcript or copy raw/private payloads.
 - Update `wiki/sources-json.md` hashes only for sources actually reviewed and incorporated. A changed hash is not proof of understanding or acceptance. Keep notes specific and useful; do not change knowledge merely to clear a health warning.

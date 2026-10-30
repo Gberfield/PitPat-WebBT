@@ -1,5 +1,9 @@
 # macOS compatibility: plan index
 
+Status: complete and merged into `main` (October 2026). This index is the original
+plan, kept as written; `mac-compat` no longer exists. For upkeep, read
+[macOS operations](../macos-operations.md).
+
 Branch: `mac-compat`, based on `codex/dedicated-safety` @ `93f84b8`.
 Written 2026-10-27 (America/New_York) from a real run of the test suite on
 macOS (Apple Silicon, Python 3.14 via uv, Node 26).

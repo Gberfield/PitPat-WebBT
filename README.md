@@ -196,7 +196,9 @@ uv run --frozen python scripts/install-macos.py rollback --manifest ~/.local/sta
 
 `services-stop` does not stop the belt. Rollback refuses while either service is
 running or loaded and restores the previous bytes of every installed file. It
-keeps logs, walks and state. See the [macOS acceptance checklist](docs/macos-acceptance.md).
+keeps logs, walks and state. See [macOS operations](docs/macos-operations.md) for
+updates and troubleshooting, the [macOS acceptance checklist](docs/macos-acceptance.md)
+for results, and the [documentation index](docs/README.md) for everything else.
 
 ## Upstream demo
 
