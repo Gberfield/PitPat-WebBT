@@ -1,0 +1,4 @@
+#!/bin/sh
+# Installer replaces these placeholders with the reviewed fixed repository path.
+cd @REPO_SHELL@ || exit 1
+exec @PYTHON_SHELL@ -m bridge.safety_main "$@"
