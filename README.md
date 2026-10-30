@@ -198,9 +198,11 @@ uv run --frozen python scripts/install-macos.py rollback --manifest ~/.local/sta
 running or loaded and restores the previous bytes of every installed file. It
 keeps logs, walks and state. See the [macOS acceptance checklist](docs/macos-acceptance.md).
 
-## Live Demo
+## Upstream demo
 
-[https://keirany.github.io/PitPat-WebBT/](https://keirany.github.io/PitPat-WebBT/)
+The [original upstream demo](https://keirany.github.io/PitPat-WebBT/) is hosted by keirany. It is the static
+Web Bluetooth dashboard only, separate from this fork's bridge, safety process and
+desktop integrations.
 
 ## American units
 
@@ -339,3 +341,7 @@ Bulk safety evidence stays in saved walks/exports rather than live UI messages.
 The explicit recovery sequence and separate Start remain required. See
 [current acceptance and remaining limits](docs/dedicated-safety-acceptance.md)
 and the [closeout handoff](docs/closeout-handoff.md).
+
+## License
+
+See [LICENSE](LICENSE).
