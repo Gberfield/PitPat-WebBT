@@ -62,6 +62,23 @@ class SafetyLauncherTests(unittest.TestCase):
         process=self.start();os.kill(int(self.out.read_text()),signal.SIGKILL)
         self.assertEqual(process.wait(timeout=10),-signal.SIGKILL)
 
+    def test_opened_as_an_app_opens_the_menu_bar_app_instead(self):
+        # LaunchServices names app launches application.<bundle id>.…; launchd jobs get their label.
+        self.stand_in(f'echo ran > {self.out}\n')
+        bin_dir=self.root/'bin';bin_dir.mkdir();opened=self.root/'opened'
+        (bin_dir/'open').write_text(f'#!/bin/sh\necho "$*" > {opened}\n');(bin_dir/'open').chmod(0o755)
+        env=dict(os.environ,PATH=f'{bin_dir}:/usr/bin:/bin',XPC_SERVICE_NAME='application.com.gberfield.pitpat.safety.1.2')
+        result=subprocess.run([str(self.launcher)],env=env,timeout=10)
+        self.assertEqual(result.returncode,0)
+        self.assertEqual(opened.read_text(),'-b com.gberfield.pitpat.menubar\n')
+        self.assertFalse(self.out.exists())
+
+    def test_launchd_job_still_runs_the_script(self):
+        self.stand_in(f'echo ran > {self.out}\n')
+        env=dict(os.environ,XPC_SERVICE_NAME='com.gberfield.pitpat.safety')
+        self.assertEqual(subprocess.run([str(self.launcher)],env=env,timeout=10).returncode,0)
+        self.assertEqual(self.out.read_text(),'ran\n')
+
     def test_missing_script_fails(self):
         result=subprocess.run([str(self.launcher)],capture_output=True,text=True,timeout=10)
         self.assertEqual(result.returncode,1);self.assertIn('cannot start',result.stderr)

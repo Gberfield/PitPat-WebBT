@@ -2,7 +2,23 @@
 // child rather than exec'ing it, so this signed bundle stays the process macOS
 // credits with Bluetooth use. Forwards SIGTERM (launchd and `pitpat services-stop`)
 // and exits the way the child did.
+//
+// Opened as an app (Spotlight, Finder, the Dock), it would run a second safety process outside
+// launchd that the menu bar app can't stop and that blocks the real service's lock. So when
+// LaunchServices started it, it opens the menu bar app instead, which starts the services.
 import Foundation
+
+if ProcessInfo.processInfo.environment["XPC_SERVICE_NAME"]?.hasPrefix("application.") == true {
+    var opener: pid_t = 0
+    let words: [String] = ["open", "-b", "com.gberfield.pitpat.menubar"]
+    var args = words.map { strdup($0) } + [nil]
+    if posix_spawnp(&opener, "open", nil, nil, &args, environ) == 0 {
+        var status: Int32 = 0
+        while waitpid(opener, &status, 0) < 0 && errno == EINTR {}
+        exit(status == 0 ? 0 : 1)
+    }
+    exit(1)
+}
 
 let script = Bundle.main.bundlePath + "/Contents/Resources/pitpat-safety"
 var child: pid_t = 0
