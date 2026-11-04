@@ -5,11 +5,11 @@ changes. Read it first when picking the project up again.
 
 ## Where things stand
 
-In progress (November 4, 2026): the menu bar app now starts both services when it
-opens and stops them when it quits, so `pitpat controls` is no longer needed. The change is on branch
-`mac/tray-starts-services`, not yet merged or installed; the installed app still
-needs `pitpat controls` until a reinstall. Macs
-and Linux share one codebase.
+Nothing is in progress and nothing is blocked. Macs and Linux share one codebase.
+On November 4, 2026 the menu bar app began starting both services when it opens
+and stopping them when it quits, so `pitpat controls` is no longer needed. It is
+merged and installed on the owner's MacBook. Still unchecked on the installed app:
+a quit with a treadmill connected.
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
   repository checkout on `main`. Physical acceptance passed on October 29, 2026; see
