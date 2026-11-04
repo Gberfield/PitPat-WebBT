@@ -76,6 +76,7 @@ Bluetooth permission again.
 | Symptom | Cause and fix |
 | --- | --- |
 | **Application unavailable** that doesn't clear | The bridge isn't running. Read the red message in the popover and `~/Library/Logs/PitPat/bridge.log`. Check that the agents are loaded with `launchctl print gui/$(id -u)/com.gberfield.pitpat.bridge`; if not, run the two `launchctl bootstrap` lines under Reinstalling. Menu bar builds before November 4, 2026 don't start the services; use `pitpat controls` or reinstall. |
+| `safety.log` says "Another PitPat bridge is already running" | Another safety process holds the lock. `launchctl list \| grep pitpat` shows it as `application.com.gberfield.pitpat.safety…` if it was opened as an app. Builds before November 4, 2026 ran a second copy when **PitPat Safety** was opened from Spotlight or Finder; newer builds open the menu bar app instead. Use the physical stop if the belt is moving, then stop that process with `kill -TERM PID`. |
 | **Stop unconfirmed** | Use the physical stop control first. Then read the popover and the logs. |
 | Fault or recovery after `pitpat stop` with nothing connected | Expected: a Stop with no treadmill cannot be confirmed. Run `pitpat services-stop`, then `pitpat controls`. |
 | Bluetooth settings list Python or a terminal | The foreground commands run outside the app, so macOS credits whatever started them. For the installed services it should list **PitPat Safety**. If not, check that `Contents/MacOS/pitpat-safety` is a Mach-O binary with `file`, then reinstall. |
@@ -101,6 +102,13 @@ it responsible for itself. So check attribution under launchd:
 ```
 
 Pass the Python safety process's PID. The result should be the launcher's PID.
+
+The launcher runs the safety process only when launchd starts it. Opened as an app
+(Spotlight, Finder or the Dock), it opens the menu bar app instead. Otherwise it
+would run a second safety process that launchd doesn't track, which the menu bar
+app can't stop and which blocks the real service's lock. It tells the two apart by
+`XPC_SERVICE_NAME`: the service name under launchd, `application.…` from
+LaunchServices.
 
 ## Testing on a Mac
 
