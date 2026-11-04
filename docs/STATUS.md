@@ -6,7 +6,7 @@ changes. Read it first when picking the project up again.
 ## Where things stand
 
 In progress (November 4, 2026): the menu bar app now starts both services when it
-opens, so `pitpat controls` is no longer needed. The change is on branch
+opens and stops them when it quits, so `pitpat controls` is no longer needed. The change is on branch
 `mac/tray-starts-services`, not yet merged or installed; the installed app still
 needs `pitpat controls` until a reinstall. Macs
 and Linux share one codebase.

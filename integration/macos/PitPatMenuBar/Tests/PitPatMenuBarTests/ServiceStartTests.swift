@@ -9,6 +9,13 @@ final class ServiceStartTests: XCTestCase {
         ])
     }
 
+    func testStopsBridgeThenSafety() {
+        XCTAssertEqual(ServiceStart.stopCommands(uid: 501), [
+            ["kill", "SIGTERM", "gui/501/com.gberfield.pitpat.bridge"],
+            ["kill", "SIGTERM", "gui/501/com.gberfield.pitpat.safety"],
+        ])
+    }
+
     func testSkipsRealServicesForCustomRuntimes() {
         XCTAssertTrue(ServiceStart.shouldStart([:]))
         XCTAssertTrue(ServiceStart.shouldStart(["PITPAT_RUNTIME_DIR": ""]))

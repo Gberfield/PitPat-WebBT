@@ -130,7 +130,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         if terminating { return .terminateNow }
         terminating = true
-        service.quit { NSApp.reply(toApplicationShouldTerminate: true) }
+        let manages = ServiceStart.shouldStart()
+        service.quit(stopBelt: manages) {
+            if manages { ServiceStart.stop { NSApp.reply(toApplicationShouldTerminate: true) } }
+            else { NSApp.reply(toApplicationShouldTerminate: true) }
+        }
         return .terminateLater
     }
 
