@@ -99,6 +99,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         host.sizingOptions = .preferredContentSize
         popover.contentViewController = host
         observer = service.objectWillChange.sink { [weak self] _ in DispatchQueue.main.async { self?.updateButton() } }
+        if ServiceStart.shouldStart() {
+            ServiceStart.run { [weak self] failure in if let failure { self?.service.errorText = failure } }
+        }
+        // The one-second tick retries the socket, so it connects once the bridge is up.
         service.registerView("menubar")
         updateButton()
         hotkeys = Hotkeys([(kVK_ANSI_P, { [weak self] in self?.showControls() }),

@@ -159,8 +159,10 @@ open ~/Applications/PitPat.app
 ```
 
 Bootstrapping loads the agents without starting them. They start on demand only:
-`pitpat controls` starts both and opens the menu bar app. Opening the app alone
-does not start them. They have no automatic restart and are not started at login. With the installed safety process, macOS asks
+opening the menu bar app (from Spotlight, Finder or `pitpat controls`) starts both.
+Starting the bridge does not scan or connect; that still waits for Connect. Quitting
+the app leaves the services running, and `pitpat services-stop` stops them. They
+have no automatic restart and are not started at login. With the installed safety process, macOS asks
 for Bluetooth permission for **PitPat Safety** rather than for a terminal or Python:
 the app's small launcher starts the safety process as its child, so macOS credits
 the signed app. Each install re-signs the app, so macOS may ask again after one.

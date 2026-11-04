@@ -115,7 +115,7 @@ final class Service: ObservableObject {
 
     @discardableResult
     func request(_ op: String, _ args: [String: Any] = [:], _ callback: ((JSON) -> Void)? = nil) -> Bool {
-        if !authorized || channel == nil { errorText = "Local bridge unavailable. Open Controls to start it."; return false }
+        if !authorized || channel == nil { errorText = "Local bridge unavailable. Quit and reopen PitPat to start it."; return false }
         if pending.count >= 8 { errorText = "Too many pending requests"; return false }
         serial += 1
         let id = String(serial)

@@ -82,7 +82,7 @@ final class ServiceTests: XCTestCase {
     func testRequestsNeedAnAuthorizedSocket() {
         let service = Service(runtime: "/nonexistent")
         XCTAssertFalse(service.request("stop"))
-        XCTAssertEqual(service.errorText, "Local bridge unavailable. Open Controls to start it.")
+        XCTAssertEqual(service.errorText, "Local bridge unavailable. Quit and reopen PitPat to start it.")
         XCTAssertFalse(service.stop())
     }
 }
