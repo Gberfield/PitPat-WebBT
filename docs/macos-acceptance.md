@@ -96,3 +96,18 @@ failures. Do not check an item that was not physically observed.
   `~/Library/LaunchAgents`, and kept logs, walks and state. Checked by listing,
   not against a byte listing taken before the install. The rolled-back manifest
   was kept as `install-macos.rolled-back-20261029.json`.
+
+### November 4, 2026: the menu bar app owns the services
+
+Checked on the installed app after #27 and #29 were installed: the owner used the
+app, and the service states were read from `launchctl print`.
+
+- [x] Opening **PitPat** from Spotlight started both services, and the owner used it
+  without running `pitpat controls`.
+- [x] Quitting the menu bar app stopped the tray, the bridge and the safety service;
+  launchd recorded exit code 0 for both services.
+- [x] **Quit PitPat menu bar** with the treadmill connected: the belt stopped.
+- [x] Opening **PitPat Safety** from Spotlight opened the menu bar app and ran no
+  second safety process. Before #29, a copy opened this way at 11:32 AM held the
+  safety lock, so the real service failed with "Another PitPat bridge is already
+  running".

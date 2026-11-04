@@ -1,8 +1,9 @@
 # Documentation
 
 This repository is the complete record for PitPat. There is no separate project
-wiki to consult or keep in sync. For the current state and optional work, read
-[project status](STATUS.md).
+wiki to consult or keep in sync. For the current state, optional work and settled owner
+decisions, read [project status](STATUS.md). Don't rely on an agent's memory for any
+of it.
 
 ## Using it
 
