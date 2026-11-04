@@ -1,12 +1,15 @@
 # Project status
 
-Last updated: October 30, 2026 (EDT). Update this file whenever the state below
+Last updated: November 4, 2026 (EST). Update this file whenever the state below
 changes. Read it first when picking the project up again.
 
 ## Where things stand
 
-Nothing is in progress and nothing is blocked. All work is on `main`, with no open
-pull requests or issues. Macs and Linux share one codebase.
+In progress (November 4, 2026): the menu bar app now starts both services when it
+opens and stops them when it quits, so `pitpat controls` is no longer needed. The change is on branch
+`mac/tray-starts-services`, not yet merged or installed; the installed app still
+needs `pitpat controls` until a reinstall. Macs
+and Linux share one codebase.
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
   repository checkout on `main`. Physical acceptance passed on October 29, 2026; see
@@ -34,6 +37,9 @@ None of this is required. Each item waits on the owner.
 4. **`pitpat stop` with nothing connected.** It latches a fault, so the next Connect
    needs recovery. This was left unchanged on purpose: changing it means changing
    the recovery rules, which needs the owner's decision.
+5. **Start PitPat at login.** Adding `PitPat.app` to Login Items would start the
+   tray and both services at every login. Not done: it changes the "never at login"
+   policy, so it needs the owner's decision.
 
 ## Safety rules for any new work
 

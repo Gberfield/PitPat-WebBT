@@ -51,11 +51,21 @@ final class Service: ObservableObject {
         }
     }
 
-    // Releases motion ownership like closing the last Linux view, then calls done.
-    func quit(_ done: @escaping () -> Void) {
+    // Releases motion ownership like closing the last Linux view, then calls done. With stopBelt,
+    // a connection another client controls gets Stop & Disconnect first, because the services are
+    // about to stop (the owner's release already stops and disconnects). A timeout drops the
+    // socket, which also calls done.
+    func quit(stopBelt: Bool = false, _ done: @escaping () -> Void) {
         released = done
-        unregisterView("menubar")
-        notifyReleased()
+        let finish = { [weak self] in
+            guard let self else { return }
+            self.unregisterView("menubar")
+            self.notifyReleased()
+        }
+        if stopBelt && authorized && snapshot["connected"].truthy && !isOwner {
+            if request("stop_disconnect", [:], { _ in finish() }) { return }
+        }
+        finish()
     }
 
     private func notifyReleased() {
@@ -115,7 +125,7 @@ final class Service: ObservableObject {
 
     @discardableResult
     func request(_ op: String, _ args: [String: Any] = [:], _ callback: ((JSON) -> Void)? = nil) -> Bool {
-        if !authorized || channel == nil { errorText = "Local bridge unavailable. Open Controls to start it."; return false }
+        if !authorized || channel == nil { errorText = "Local bridge unavailable. Quit and reopen PitPat to start it."; return false }
         if pending.count >= 8 { errorText = "Too many pending requests"; return false }
         serial += 1
         let id = String(serial)

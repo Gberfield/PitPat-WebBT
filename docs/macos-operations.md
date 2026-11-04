@@ -10,7 +10,7 @@ For what was tested and when, read the [acceptance checklist](macos-acceptance.m
 | --- | --- | --- |
 | Safety app | `~/Applications/PitPat Safety.app` | Swift launcher plus `Contents/Resources/pitpat-safety` |
 | Menu bar app | `~/Applications/PitPat.app` | A copy of the built app |
-| Services | `~/Library/LaunchAgents/com.gberfield.pitpat.{safety,bridge}.plist` | Start on demand, never at login |
+| Services | `~/Library/LaunchAgents/com.gberfield.pitpat.{safety,bridge}.plist` | Start when the menu bar app opens, stop when it quits, never at login |
 | Command | `~/.local/bin/pitpat` | |
 | Install manifest | `~/.local/state/pitpat/install-macos.json` | Needed for rollback |
 | Logs | `~/Library/Logs/PitPat/` | `safety.log` is normally empty |
@@ -25,11 +25,19 @@ The services and `pitpat` run the code in this repository folder through its
 
 ## Daily use
 
-1. Run `pitpat controls`. It starts both services and opens the menu bar app.
+1. Open **PitPat** from Spotlight, Finder or the Dock (or run `pitpat controls`).
+   Opening the menu bar app starts both services; the popover shows
+   **Disconnected** within a few seconds. If it stays on **Application
+   unavailable**, see Troubleshooting.
 2. Press **Connect**, then **Start**.
-3. Finish with **Stop & Disconnect**.
+3. Finish with **Stop & Disconnect**, then **Quit PitPat menu bar**.
 
-`pitpat services-stop` stops the services. It does not stop the belt, so use
+Quitting the menu bar app stops both services. If a treadmill is still connected,
+it first sends Stop & Disconnect, even when the dashboard controls the belt. If
+that Stop isn't confirmed, the safety service still stops the belt as it shuts
+down, and the next Connect asks you to confirm Stop and acknowledge recovery.
+
+`pitpat services-stop` also stops the services. It does not stop the belt, so use
 **Stop & Disconnect** first.
 
 After a crash or freeze, the next session may ask you to confirm Stop and
@@ -67,6 +75,7 @@ Bluetooth permission again.
 
 | Symptom | Cause and fix |
 | --- | --- |
+| **Application unavailable** that doesn't clear | The bridge isn't running. Read the red message in the popover and `~/Library/Logs/PitPat/bridge.log`. Check that the agents are loaded with `launchctl print gui/$(id -u)/com.gberfield.pitpat.bridge`; if not, run the two `launchctl bootstrap` lines under Reinstalling. Menu bar builds before November 4, 2026 don't start the services; use `pitpat controls` or reinstall. |
 | **Stop unconfirmed** | Use the physical stop control first. Then read the popover and the logs. |
 | Fault or recovery after `pitpat stop` with nothing connected | Expected: a Stop with no treadmill cannot be confirmed. Run `pitpat services-stop`, then `pitpat controls`. |
 | Bluetooth settings list Python or a terminal | The foreground commands run outside the app, so macOS credits whatever started them. For the installed services it should list **PitPat Safety**. If not, check that `Contents/MacOS/pitpat-safety` is a Mach-O binary with `file`, then reinstall. |
@@ -99,6 +108,9 @@ Pass the Python safety process's PID. The result should be the launcher's PID.
   and the crash and freeze tests need an empty belt.
 - The launcher tests in `tests/test_macos_launcher.py` skip until
   `scripts/build-menubar.sh` has run.
+- The menu bar app starts the real services when it opens and stops them when it
+  quits, unless
+  `PITPAT_RUNTIME_DIR`, `PITPAT_RUNTIME_ROOT` or `PITPAT_NO_SERVICE_START` is set.
 - `SimulatorTests` are opt-in: set `PITPAT_SIMULATOR_RUNTIME` and
   `PITPAT_SIMULATOR_BRIDGE_PID`. `PITPAT_RUNTIME_DIR` points the app at a runtime
   folder, passed with `open --env`.
