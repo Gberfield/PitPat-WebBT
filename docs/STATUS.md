@@ -39,9 +39,18 @@ None of this is required. Each item waits on the owner.
 4. **`pitpat stop` with nothing connected.** It latches a fault, so the next Connect
    needs recovery. This was left unchanged on purpose: changing it means changing
    the recovery rules, which needs the owner's decision.
-5. **Start PitPat at login.** Adding `PitPat.app` to Login Items would start the
-   tray and both services at every login. Not done: it changes the "never at login"
-   policy, so it needs the owner's decision.
+
+## Owner decisions
+
+Settled; don't reopen them without the owner. Newest first.
+
+- **November 4, 2026: PitPat never starts at login.** The owner opens PitPat when
+  they want it. Opening the menu bar app starts both services, and quitting it
+  stops them. Don't add `PitPat.app` to Login Items or set `RunAtLoad`. This is
+  the "on-demand service policy" in the safety rules below.
+- **October 30, 2026: no wiki.** This repository is the complete record. Don't
+  enroll it in a wiki or keep project knowledge in an agent's memory. Record it
+  here or in the docs linked from [docs/README.md](README.md).
 
 ## Safety rules for any new work
 
