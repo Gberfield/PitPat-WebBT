@@ -44,3 +44,41 @@ class FacadeTests(unittest.IsolatedAsyncioTestCase):
             self.assertIsNone(self.facade.safety.writer)
             self.assertFalse([task for task in self.facade.tasks if not task.done()])
         finally:parked.rename(self.server.path)
+
+class InterruptedRecordTests(unittest.IsolatedAsyncioTestCase):
+    # A walk left open by a bridge restart withholds recording readiness, so Connect gets no
+    # grant. With no fault there is no recovery to acknowledge: the tray claims, resolves the
+    # record and then takes control. The tray's "Claim control to resolve record" relies on this.
+    async def asyncSetUp(self):
+        from bridge.recorder import Recorder
+        from bridge.store import WalkStore
+        self.tmp=tempfile.TemporaryDirectory();root=Path(self.tmp.name)
+        store=WalkStore(root/'state'/'walks.sqlite3')
+        store.save(dict(schemaVersion=2,sessionId='left-open',date=1000,startedAt='1970-01-01T00:00:01Z',
+                        status='running',coverage='complete',lastObservedAt=2000,duration=1,steps=1,distanceMiles=0,calories='0 Cal'),True)
+        self.server=SafetyServer(SafetyCore(SimulatorBackend()),root/'s');await self.server.serve()
+        self.facade=Controller(SafetyClient(self.server.runtime,'app'),recorder_factory=lambda:Recorder(store))
+        self.facade.register_client('tray','tray');await self.facade.initialize();self.serial=0
+    async def asyncTearDown(self):await self.facade.shutdown();await self.server.close();self.tmp.cleanup()
+    async def call(self,op,args=None):
+        self.serial+=1
+        return await self.facade.dispatch('tray',dict(id=str(self.serial),op=op,generation=self.facade.generation,args=args or {}))
+    async def test_tray_claims_resolves_and_takes_control_without_a_fault(self):
+        devices=await self.call('discover')
+        with self.assertRaisesRegex(ValueError,'recording readiness'):await self.call('connect',{'device_id':devices['devices'][0]['id']})
+        view=self.facade.snapshot_for('tray')
+        self.assertTrue(view['connected']);self.assertFalse(view['owner_present']);self.assertFalse(view['recovery']);self.assertIsNone(view['fault_id'])
+        self.assertEqual(view['session']['status'],'interrupted');self.assertFalse(view['can_resolve_session'])
+        with self.assertRaises(ValueError):await self.call('resolve_session',{'session_id':'left-open','choice':'new'})
+        with self.assertRaises(ValueError):await self.call('take_control')
+        await self.call('connect',{'recover':True})
+        view=self.facade.snapshot_for('tray')
+        self.assertTrue(view['is_recovery_claimant']);self.assertTrue(view['can_resolve_session'])
+        await self.call('resolve_session',{'session_id':'left-open','choice':'new'})
+        view=self.facade.snapshot_for('tray')
+        # No grant yet: the bridge still reports motion blocked, but control can now be taken.
+        self.assertIsNone(view['session']);self.assertFalse(view['owner_present']);self.assertTrue(view['blocked'])
+        self.assertEqual(view['authorization_state'],'unarmed')
+        await self.call('take_control')
+        self.assertTrue(self.facade.snapshot_for('tray')['is_owner'])
+        self.assertEqual(self.server.core.backend.state,3)

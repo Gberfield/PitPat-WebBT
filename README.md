@@ -333,6 +333,9 @@ a manually startable user service without enabling login startup. See
 
 A fault stays latched after the belt reports zero. Claim recovery control, resolve
 the interrupted record, then choose **Confirm Stop and acknowledge recovery**.
+A walk left open by a bridge restart is also held as an interrupted record, with no
+fault: the tray offers **Claim control to resolve record**, and after the continuity
+choice **Take control while stopped** works on the stopped, ownerless connection.
 A separate Start is required; startup and reconnect never start motion.
 Super+F11 sends Stop directly to the safety process even if the application is
 unavailable. If it reports Stop unconfirmed, use the physical stop control.
