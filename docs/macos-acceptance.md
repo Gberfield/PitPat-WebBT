@@ -111,3 +111,13 @@ app, and the service states were read from `launchctl print`.
   second safety process. Before #29, a copy opened this way at 11:32 AM held the
   safety lock, so the real service failed with "Another PitPat bridge is already
   running".
+
+### November 6, 2026: resolving an interrupted record without a fault
+
+Checked on the installed app after #32 was installed, with the November 5 walk
+still held as an interrupted record (left open when the bridge last stopped).
+
+- [x] Connect reported "Require healthy stopped connection and recording
+  readiness" with no fault; **Claim control to resolve record** appeared, the
+  continuity choice enabled, **Take control while stopped** then gave the tray
+  control, and the owner started a walk from the tray.

@@ -19,8 +19,9 @@ interrupted record, the bridge withheld recording readiness, and the tray only
 offered to claim and resolve the record after a safety fault. The tray (Mac and
 Omarchy) now offers **Claim control to resolve record** for an interrupted record
 without a fault, and **Take control while stopped** works on a settled, ownerless
-connection. It was installed on the owner's MacBook the same day but is not yet
-checked on the installed app. Why the
+connection. It was installed on the owner's MacBook the same day and checked
+there: the owner claimed, resolved the record, took control and walked; see
+[macOS acceptance](macos-acceptance.md). Why the
 November 5 walk was left open is not known; the bridge log only shows restarts.
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
