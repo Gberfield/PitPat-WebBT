@@ -402,7 +402,7 @@
    "snapshot": {
     "available": true,
     "connected": true,
-    "blocked": false,
+    "blocked": true,
     "stale": false,
     "recovery": false,
     "target_speed": 1000,
@@ -416,7 +416,8 @@
      "steps": 1000,
      "calories": 30,
      "duration": 600000
-    }
+    },
+    "authorization_state": "unarmed"
    },
    "view": {
     "state": "Stopped",
@@ -425,7 +426,7 @@
     "canStartPause": false,
     "canAdjust": false,
     "canStop": true,
-    "canTakeControl": false,
+    "canTakeControl": true,
     "startText": "Start",
     "speed": "0.00 mph",
     "distance": "1.000 mi",
@@ -441,7 +442,7 @@
    "snapshot": {
     "available": true,
     "connected": true,
-    "blocked": false,
+    "blocked": true,
     "stale": false,
     "recovery": false,
     "target_speed": 1000,
@@ -455,14 +456,15 @@
      "steps": 1000,
      "calories": 30,
      "duration": 600000
-    }
+    },
+    "authorization_state": "unarmed"
    },
    "view": {
     "state": "Stopped",
     "label": "Stopped",
     "owner": "Tray controls motion",
-    "canStartPause": true,
-    "canAdjust": true,
+    "canStartPause": false,
+    "canAdjust": false,
     "canStop": true,
     "canTakeControl": false,
     "startText": "Start",
@@ -1429,6 +1431,268 @@
    }
   },
   {
+   "name": "interrupted-no-owner-claimant",
+   "isOwner": false,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "unarmed",
+    "is_recovery_claimant": true,
+    "session": {
+     "status": "interrupted",
+     "sessionId": "s1"
+    }
+   },
+   "view": {
+    "state": "Stopped",
+    "label": "Stopped",
+    "owner": "No motion controller",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "interrupted-no-owner-claimant",
+   "isOwner": true,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "unarmed",
+    "is_recovery_claimant": true,
+    "session": {
+     "status": "interrupted",
+     "sessionId": "s1"
+    }
+   },
+   "view": {
+    "state": "Stopped",
+    "label": "Stopped",
+    "owner": "Tray controls motion",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "resolved-no-owner-claimant",
+   "isOwner": false,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "unarmed",
+    "is_recovery_claimant": true,
+    "session": {
+     "status": "paused",
+     "sessionId": "s1"
+    }
+   },
+   "view": {
+    "state": "Stopped",
+    "label": "Stopped",
+    "owner": "No motion controller",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": true,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "resolved-no-owner-claimant",
+   "isOwner": true,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "unarmed",
+    "is_recovery_claimant": true,
+    "session": {
+     "status": "paused",
+     "sessionId": "s1"
+    }
+   },
+   "view": {
+    "state": "Stopped",
+    "label": "Stopped",
+    "owner": "Tray controls motion",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "stopping-no-owner",
+   "isOwner": false,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "stopping",
+    "stopping": true
+   },
+   "view": {
+    "state": "Stopping",
+    "label": "Stopping",
+    "owner": "No motion controller",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "stopping-no-owner",
+   "isOwner": true,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": true,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": false,
+    "owner_kind": null,
+    "metrics": {
+     "speed_raw": 0,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    },
+    "authorization_state": "stopping",
+    "stopping": true
+   },
+   "view": {
+    "state": "Stopping",
+    "label": "Stopping",
+    "owner": "Tray controls motion",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.00 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
    "name": "blocked",
    "isOwner": false,
    "snapshot": {
@@ -1457,7 +1721,7 @@
     "canStartPause": false,
     "canAdjust": false,
     "canStop": true,
-    "canTakeControl": false,
+    "canTakeControl": true,
     "startText": "Start",
     "speed": "0.00 mph",
     "distance": "1.000 mi",

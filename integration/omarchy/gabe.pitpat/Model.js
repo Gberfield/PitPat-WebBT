@@ -9,13 +9,15 @@ function duration(seconds) {
 }
 function view(snapshot,isOwner) {
     var s=snapshot||{}, m=s.metrics||{}, known=s.connected&&!s.stale&&m.state!==undefined;
-    var healthy=known&&!s.fault_id&&!s.blocked&&!s.recovery&&!s.storage_fault&&!s.stopping&&s.session?.status!=='interrupted';
+    // Taking control needs a settled connection; motion also needs a ready grant (not blocked).
+    var settled=known&&!s.fault_id&&!s.recovery&&!s.storage_fault&&!s.stopping&&s.session?.status!=='interrupted';
+    var healthy=settled&&!s.blocked;
     var state=s.stopping?'Stopping':s.connecting?'Connecting':!s.available?'Application unavailable':s.safety_available===false?'Safety unavailable':!s.connected?'Disconnected':
         !known||s.recovery?'Motion unknown':['Starting','Walking','Paused','Stopped'][m.state]||'Motion unknown';
     return {state:state,label:(s.simulator?'SIMULATOR · ':'')+state,
         owner:isOwner?'Tray controls motion':s.owner_kind?s.owner_kind+' controls motion · observing':'No motion controller',
         canStartPause:!!(isOwner&&healthy&&m.state!==0),canAdjust:!!(isOwner&&healthy&&m.state!==0),
-        canStop:!!s.connected,canTakeControl:!!(!isOwner&&healthy&&s.owner_present&&m.state===3&&m.speed_raw===0),
+        canStop:!!s.connected,canTakeControl:!!(!isOwner&&settled&&m.state===3&&m.speed_raw===0),
         startText:m.state===1?'Pause':'Start',
         speed:known?(m.speed_raw/1000/(m.unit_mode?1:1.609344)).toFixed(2)+' mph':'—',
         distance:known?(m.distance/1000/(m.unit_mode?1:1.609344)).toFixed(3)+' mi':'—',

@@ -139,8 +139,10 @@ enum Model {
         let s: JSON = snapshot.truthy ? snapshot! : .object([:])
         let m: JSON = s["metrics"].truthy ? s["metrics"]! : .object([:])
         let known = s["connected"].truthy && !s["stale"].truthy && m["state"] != nil
-        let healthy = known && !s["fault_id"].truthy && !s["blocked"].truthy && !s["recovery"].truthy && !s["storage_fault"].truthy
+        // Taking control needs a settled connection; motion also needs a ready grant (not blocked).
+        let settled = known && !s["fault_id"].truthy && !s["recovery"].truthy && !s["storage_fault"].truthy
             && !s["stopping"].truthy && s["session"]?["status"] != .string("interrupted")
+        let healthy = settled && !s["blocked"].truthy
         let states = ["Starting", "Walking", "Paused", "Stopped"]
         var named: String? = nil
         switch m["state"] {
@@ -158,7 +160,7 @@ enum Model {
             owner: isOwner ? "Tray controls motion" : s["owner_kind"].truthy ? s["owner_kind"].jsString + " controls motion · observing" : "No motion controller",
             canStartPause: isOwner && healthy && !m["state"].strictlyEquals(0), canAdjust: isOwner && healthy && !m["state"].strictlyEquals(0),
             canStop: s["connected"].truthy,
-            canTakeControl: !isOwner && healthy && s["owner_present"].truthy && m["state"].strictlyEquals(3) && m["speed_raw"].strictlyEquals(0),
+            canTakeControl: !isOwner && settled && m["state"].strictlyEquals(3) && m["speed_raw"].strictlyEquals(0),
             startText: m["state"].strictlyEquals(1) ? "Pause" : "Start",
             speed: known ? jsFixed(m["speed_raw"].jsNumber / 1000 / miles, 2) + " mph" : "—",
             distance: known ? jsFixed(m["distance"].jsNumber / 1000 / miles, 3) + " mi" : "—",

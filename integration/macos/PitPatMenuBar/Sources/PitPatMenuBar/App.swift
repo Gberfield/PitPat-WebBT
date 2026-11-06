@@ -42,8 +42,10 @@ struct ControlsView: View {
             ForEach(service.devices) { device in
                 Button("Connect: " + device.name) { service.connectDevice(device.id) }.disabled(s["connected"].truthy)
             }
-            if s["recovery"].truthy && !s["is_recovery_claimant"].truthy {
-                Button("Claim recovery control") { service.recover() }
+            if (s["recovery"].truthy || interrupted) && !s["is_recovery_claimant"].truthy {
+                // An interrupted record withholds recording readiness, so Connect gets no
+                // control grant. Claiming lets the tray resolve the record, then take control.
+                Button(s["recovery"].truthy ? "Claim recovery control" : "Claim control to resolve record") { service.recover() }
             }
             if s["fault_id"].truthy {
                 Button("Confirm Stop and acknowledge recovery") { service.acknowledgeRecovery() }

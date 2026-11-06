@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: November 4, 2026 (EST). Update this file whenever the state below
+Last updated: November 6, 2026 (EST). Update this file whenever the state below
 changes. Read it first when picking the project up again.
 
 ## Where things stand
@@ -12,6 +12,17 @@ merged and installed on the owner's MacBook. Opening **PitPat Safety** by hand n
 opens the menu bar app instead of running a second safety process. The owner
 checked all of this on the installed app the same day, including a quit with the
 treadmill connected: the belt stopped.
+
+On November 6, 2026 the tray could not get control after Connect: the November 5
+walk had been left open when the bridge last stopped, so it was held as an
+interrupted record, the bridge withheld recording readiness, and the tray only
+offered to claim and resolve the record after a safety fault. The tray (Mac and
+Omarchy) now offers **Claim control to resolve record** for an interrupted record
+without a fault, and **Take control while stopped** works on a settled, ownerless
+connection. It was installed on the owner's MacBook the same day and checked
+there: the owner claimed, resolved the record, took control and walked; see
+[macOS acceptance](macos-acceptance.md). Why the
+November 5 walk was left open is not known; the bridge log only shows restarts.
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
   repository checkout on `main`. Physical acceptance passed on October 29, 2026; see

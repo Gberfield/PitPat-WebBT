@@ -74,7 +74,7 @@ Panel {
                         model:root.service?.devices||[]
                         delegate:Action {required property var modelData;text:"Connect: "+modelData.name;enabled:!root.service?.snapshot.connected;onClicked:root.service.connectDevice(modelData.id)}
                     }
-                    Action {text:"Claim recovery control";visible:root.service?.snapshot.recovery&&!root.service?.snapshot.is_recovery_claimant;onClicked:root.service.recover()}
+                    Action {text:root.service?.snapshot.recovery?"Claim recovery control":"Claim control to resolve record";visible:(root.service?.snapshot.recovery||root.service?.snapshot.session?.status==="interrupted")&&!root.service?.snapshot.is_recovery_claimant;onClicked:root.service.recover()}
                     Action {text:"Confirm Stop and acknowledge recovery";visible:!!root.service?.snapshot.fault_id;enabled:root.service?.snapshot.is_recovery_claimant&&root.service?.snapshot.session?.status!=="interrupted";onClicked:root.service.acknowledgeRecovery()}
                     RowLayout {
                         visible:root.service?.snapshot.session?.status==="interrupted"
