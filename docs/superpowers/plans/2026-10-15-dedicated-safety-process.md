@@ -138,6 +138,9 @@ and `bridge_id` must equal the attached application's ID. Bluetooth `link_epoch`
 `fault_generation`, `grant_id` and `command_seq` do not authorize this operation;
 review changes remain valid during Connect and fault transitions. All other
 operations retain their existing full authority checks.
+Validated application review updates are admitted outside the ordinary request
+backlog and applied inline in socket order, before any later motion frame.
+Other operations retain their existing backlog limits and Stop's urgent handling.
 Review and readiness have independent revision counters. Safety starts with
 review true and resets it to true, with revision -1, on application attach/detach;
 the application must explicitly publish false before motion is permitted.
