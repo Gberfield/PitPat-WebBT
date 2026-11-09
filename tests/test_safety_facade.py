@@ -72,6 +72,33 @@ class InterruptedRecordTests(unittest.IsolatedAsyncioTestCase):
     async def call(self,op,args=None):
         self.serial+=1
         return await self.facade.dispatch('tray',dict(id=str(self.serial),op=op,generation=self.facade.generation,args=args or {}))
+    async def test_recorded_review_change_during_connect_keeps_application_available(self):
+        from unittest.mock import patch
+        core=self.server.core;client=self.facade.safety;entered=asyncio.Event();release=asyncio.Event()
+        original=core.backend.connect
+        async def held_connect(*args):
+            entered.set();await release.wait();await original(*args)
+        devices=await self.call('discover');connection=None
+        with patch.object(core.backend,'connect',held_connect):
+            try:
+                connection=asyncio.create_task(self.call('connect',{'device_id':devices['devices'][0]['id']}))
+                await asyncio.wait_for(entered.wait(),1)
+                self.assertTrue(core.connecting);self.assertLess(client.snapshot['link_epoch'],core.link_epoch)
+                self.assertTrue(self.facade.tracking_review)
+                # Only the recorder update runs here; Connect publishes readiness after it finishes.
+                await self.facade.recording.submit('resolve',('left-open','new'))
+                self.assertFalse(self.facade.tracking_review)
+                async with asyncio.timeout(1):
+                    while client.notifications and client.available:await asyncio.sleep(0)
+                self.assertTrue(client.available);self.assertIsNotNone(self.server.application)
+                self.assertIsNone(core.fault_id);self.assertFalse(core.recording_review)
+                self.assertEqual(core.review_revision,self.facade.review_revision)
+                release.set();await connection
+                self.assertTrue(client.available);self.assertTrue(core.connected);self.assertIsNone(core.fault_id)
+                self.assertTrue(self.facade.snapshot_for('tray')['is_owner'])
+            finally:
+                release.set()
+                if connection:await asyncio.gather(connection,return_exceptions=True)
     async def test_tray_claims_resolves_and_takes_control_without_a_fault(self):
         devices=await self.call('discover')
         with self.assertRaisesRegex(ValueError,'recording readiness'):await self.call('connect',{'device_id':devices['devices'][0]['id']})

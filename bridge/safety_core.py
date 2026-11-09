@@ -186,6 +186,14 @@ class SafetyCore(StopKernel):
         return self.snapshot()
     async def handle_application(self,op,authority,args):
         if self.closing and op not in ('observe','evidence','stop'):raise ValueError('Safety shutting down')
+        if op=='recording_review':
+            a=Authority(**authority) if isinstance(authority,dict) else authority
+            # Review belongs to the application attachment, independent of Bluetooth/fault transitions.
+            if a.safety_id!=self.safety_id or a.bridge_id!=self.health.bridge_id:raise ValueError('Obsolete safety authority')
+            if args['revision']<=self.review_revision:raise ValueError('Obsolete recording review')
+            self.review_revision=args['revision'];self.recording_review=args['review']
+            if self.recording_review:self.motion_generation+=1
+            return self.snapshot()
         a=self.check_authority(authority)
         if op=='observe':return self.snapshot()
         if op=='evidence':return self.evidence(args['after_seq'],args['limit'])
@@ -204,11 +212,6 @@ class SafetyCore(StopKernel):
             if args['revision']<=self.readiness_revision or args['fault_id']!=self.fault_id:raise ValueError('Obsolete recording readiness')
             self.readiness_revision=args['revision'];self.recording_ready=args['ready']
             if not args['ready'] and self.connected:self.trip('Walk recording unavailable')
-            return self.snapshot()
-        if op=='recording_review':
-            if args['revision']<=self.review_revision:raise ValueError('Obsolete recording review')
-            self.review_revision=args['revision'];self.recording_review=args['review']
-            if self.recording_review:self.motion_generation+=1
             return self.snapshot()
         if op in ('acquire','recover'):
             healthy=not self.motion_pending and not self.connecting and not self.writer_uncertain and self.connected and self.health.healthy and not self.health.expired() and self.last and self.last.stopped and self.last_valid is not None and self.clock()-self.last_valid<5 and self.recording_ready and not (self.stop_task and not self.stop_task.done())

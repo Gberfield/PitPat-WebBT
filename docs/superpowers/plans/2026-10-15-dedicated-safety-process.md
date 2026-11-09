@@ -133,6 +133,11 @@ Never put browser tokens or personal workout exports into this protocol.
 November 9, 2026 update (issue #50): `recording_review` is an application-only,
 non-fault motion gate. `review` must be bool; `revision` must be a nonnegative
 integer (not bool), strictly newer than the last accepted review revision.
+Review is authorized against the application attachment: `safety_id` must match
+and `bridge_id` must equal the attached application's ID. Bluetooth `link_epoch`,
+`fault_generation`, `grant_id` and `command_seq` do not authorize this operation;
+review changes remain valid during Connect and fault transitions. All other
+operations retain their existing full authority checks.
 Review and readiness have independent revision counters. Safety starts with
 review true and resets it to true, with revision -1, on application attach/detach;
 the application must explicitly publish false before motion is permitted.

@@ -66,6 +66,37 @@ class SafetyCoreTests(unittest.IsolatedAsyncioTestCase):
         await self.core.handle_application('acquire',self.core.authority(),{'owner_id':'owner','owner_kind':'browser'})
     async def review(self,review,revision):
         return await self.core.handle_application('recording_review',self.core.authority(),dict(review=review,revision=revision))
+    async def test_review_accepts_stale_link_epoch_and_fault_generation(self):
+        from unittest.mock import patch
+        revision=0
+        for field in ('link_epoch','fault_generation'):
+            with self.subTest(field=field):
+                authority=self.core.authority();setattr(self.core,field,getattr(self.core,field)+1)
+                with patch.object(self.core,'trip',wraps=self.core.trip) as trip,patch.object(self.core,'detach_application',wraps=self.core.detach_application) as detach:
+                    for review in (False,True):
+                        revision+=1;generation=self.core.motion_generation
+                        result=await self.core.handle_application('recording_review',authority.json(),dict(review=review,revision=revision))
+                        self.assertIs(result['recording_review'],review)
+                        self.assertEqual(self.core.motion_generation,generation+int(review))
+                    trip.assert_not_called();detach.assert_not_called()
+                self.assertIsNone(self.core.fault_id);self.assertEqual(self.core.health.bridge_id,'app')
+                with self.assertRaisesRegex(ValueError,'Obsolete recording review'):
+                    await self.core.handle_application('recording_review',authority,dict(review=False,revision=revision))
+    async def test_review_rejects_wrong_application_or_safety_identity(self):
+        from dataclasses import replace
+        for field in ('bridge_id','safety_id'):
+            with self.subTest(field=field),self.assertRaisesRegex(ValueError,'Obsolete safety authority'):
+                await self.core.handle_application('recording_review',replace(self.core.authority(),**{field:'other'}),dict(review=False,revision=1))
+        self.assertTrue(self.core.recording_review);self.assertEqual(self.core.review_revision,-1)
+        self.assertEqual(self.core.health.bridge_id,'app');self.assertIsNone(self.core.fault_id)
+    async def test_other_operations_still_reject_stale_link_and_fault_authority(self):
+        from bridge.safety_messages import ARGS
+        for field in ('link_epoch','fault_generation'):
+            authority=self.core.authority();setattr(self.core,field,getattr(self.core,field)+1)
+            for op in ARGS:
+                if op=='recording_review':continue
+                with self.subTest(field=field,op=op),self.assertRaisesRegex(ValueError,'Obsolete safety authority'):
+                    await self.core.handle_application(op,authority,{})
     async def test_review_cancels_queued_motion_without_revoking_authority(self):
         await self.arm();grant=self.core.grant_id
         await self.core.lock.acquire()
