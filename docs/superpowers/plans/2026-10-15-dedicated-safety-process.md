@@ -93,6 +93,9 @@ that merely repeat implementation constants; exercise authority and outcomes.
 
 ## Safety IPC contract used by all tasks
 
+For the current code's authorization states, motion guards and recovery path,
+see [Safety states](../../safety-states.md).
+
 Define these names in Task 1; later tasks must not invent alternate spellings.
 
 - `Authority`: immutable fields `safety_id: str`, `link_epoch: int`,
