@@ -904,7 +904,8 @@ function captureWalk(state, raw, mph) {
         sessionActive = true;
     }
     const walk = sessionStartData;
-    walk.status = state === 2 ? 'paused' : state === 3 ? 'completed' : state === 0 ? 'starting' : 'running';
+    walk.status = raw.running_state === 3 && raw.current_speed !== 0 ? 'stopping' :
+        state === 2 ? 'paused' : state === 3 ? 'completed' : state === 0 ? 'starting' : 'running';
     walk.lastObservedAt = now;
     walk.lastCounters = counters;
     const baseline = walk.counterBaseline || { duration: 0, steps: 0, calories: 0, distanceMiles: 0 };

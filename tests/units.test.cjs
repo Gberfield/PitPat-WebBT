@@ -377,6 +377,38 @@ test('a completed walk retains distance and final stopped counters for Notion', 
     assert.ok(walk.sessionId); assert.ok(walk.endedAt);
 });
 
+test('deceleration records stopping until zero speed supplies final walk counters', () => {
+    const app = dashboard();
+    app.notify(true, 2000, 500, { duration: 900, steps: 1200, calories: 75 });
+    const id = JSON.parse(app.storage.get('treadmill_sessions'))[0].sessionId;
+    app.notify(true, 1000, 600, { state: 3, duration: 910, steps: 1220, calories: 76 });
+    const stopping = JSON.parse(app.storage.get('treadmill_sessions'))[0];
+    assert.equal(stopping.status, 'stopping');
+    assert.equal(stopping.distanceMiles, 0.6); assert.equal(stopping.duration, 910);
+    assert.equal(stopping.steps, 1220); assert.equal(stopping.calories, '76 Cal');
+    assert.equal(stopping.endedAt, undefined);
+    assert.equal(JSON.parse(app.storage.get('treadmill_current_session')).status, 'stopping');
+    assert.equal(app.node('statusChip-text').textContent, 'Stopping');
+    const exported = JSON.parse(app.run('JSON.stringify(buildNotionExport(loadSessions()))'));
+    assert.equal(exported.walks.length, 0); assert.equal(exported.excluded.length, 1);
+
+    app.notify(true, 0, 650, { state: 3, duration: 920, steps: 1250, calories: 77 });
+    const walks = JSON.parse(app.storage.get('treadmill_sessions'));
+    assert.equal(walks.length, 1); assert.equal(walks[0].sessionId, id);
+    assert.equal(walks[0].status, 'completed');
+    assert.equal(walks[0].distanceMiles, 0.65); assert.equal(walks[0].duration, 920);
+    assert.equal(walks[0].steps, 1250); assert.equal(walks[0].calories, '77 Cal');
+    assert.ok(walks[0].endedAt);
+    assert.equal(app.storage.has('treadmill_current_session'), false);
+});
+
+test('a decelerating packet cannot create a walk', () => {
+    const app = dashboard();
+    app.notify(true, 1000, 600, { state: 3 });
+    assert.deepEqual(JSON.parse(app.storage.get('treadmill_sessions')), []);
+    assert.equal(app.storage.has('treadmill_current_session'), false);
+});
+
 test('pause and resume retain one stable walk identity', () => {
     const app = dashboard(); app.notify(true, 2000);
     const id = JSON.parse(app.storage.get('treadmill_sessions'))[0].sessionId;
