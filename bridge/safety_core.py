@@ -26,7 +26,7 @@ class SafetyCore(StopKernel):
         state='fault-latched' if self.fault_id else ('stopping' if self.stop_task and not self.stop_task.done() else 'ready' if self.grant_id else 'unarmed')
         return dict(revision=self.sequence,safety_id=self.safety_id,link_epoch=self.link_epoch,fault_generation=self.fault_generation,
             fault_id=self.fault_id,fault=self.fault,link_state=self.link_state,authorization_state=state,
-            bridge_healthy=self.health.healthy and not self.health.expired(),owner_id=self.owner_id,owner_kind=self.owner_kind,
+            bridge_healthy=self.health.is_healthy(),owner_id=self.owner_id,owner_kind=self.owner_kind,
             grant_id=self.grant_id,target_speed=self.target_speed,telemetry_seq=self.telemetry_seq,
             telemetry_hex=self.last.packet.hex() if self.last else None,stale=stale,
             writer_uncertain=self.writer_uncertain,stop_confirmation_id=self.stop_confirmation_id,stop_outcome='stopped_confirmed' if self.stop_confirmation_id else 'unconfirmed',
@@ -171,7 +171,7 @@ class SafetyCore(StopKernel):
         if isinstance(a,dict):a=Authority(**a)
         if (a.safety_id!=self.safety_id or a.link_epoch!=self.link_epoch or a.fault_generation!=self.fault_generation or a.bridge_id!=self.health.bridge_id):raise ValueError('Obsolete safety authority')
         if motion or renewal:
-            if self.health.expired() or not self.health.healthy:self.trip('Application health expired')
+            if not self.health.is_healthy():self.trip('Application health expired')
             if self.grant_id and self.clock()-self.renewed>=OWNER_TIMEOUT:self.trip('Controller lease expired')
             if self.last_valid is None or self.clock()-self.last_valid>=5:self.trip('Telemetry expired')
             if (not self.grant_id or a.grant_id!=self.grant_id or self.fault_id or not self.recording_ready or not self.connected
@@ -214,7 +214,7 @@ class SafetyCore(StopKernel):
             if not args['ready'] and self.connected:self.trip('Walk recording unavailable')
             return self.snapshot()
         if op in ('acquire','recover'):
-            healthy=not self.motion_pending and not self.connecting and not self.writer_uncertain and self.connected and self.health.healthy and not self.health.expired() and self.last and self.last.stopped and self.last_valid is not None and self.clock()-self.last_valid<5 and self.recording_ready and not (self.stop_task and not self.stop_task.done())
+            healthy=not self.motion_pending and not self.connecting and not self.writer_uncertain and self.connected and self.health.is_healthy() and self.last and self.last.stopped and self.last_valid is not None and self.clock()-self.last_valid<5 and self.recording_ready and not (self.stop_task and not self.stop_task.done())
             if not healthy:raise ValueError('Require healthy stopped connection and recording readiness')
             if op=='acquire':
                 if self.fault_id:raise ValueError('Explicit fault recovery required')
@@ -238,7 +238,7 @@ class SafetyCore(StopKernel):
         def before():
             self.check_authority(a) # command sequence is already consumed; recheck all live gates below.
             if self.recording_review:raise CommandCancelled('Walk recording requires review at writer')
-            if not self.recording_ready or self.fault_id or not self.health.healthy or self.health.expired() or not self.grant_id or a.grant_id!=self.grant_id or self.clock()-self.renewed>=6 or self.last_valid is None or self.clock()-self.last_valid>=5:raise CommandCancelled('Motion authority expired at writer')
+            if not self.recording_ready or self.fault_id or not self.health.is_healthy() or not self.grant_id or a.grant_id!=self.grant_id or self.clock()-self.renewed>=6 or self.last_valid is None or self.clock()-self.last_valid>=5:raise CommandCancelled('Motion authority expired at writer')
         try:
             await self.write(encode_command(op,args['speed']),self.generation,epoch,before_write=before)
             if op=='set_speed':self.target_speed=args['speed']
