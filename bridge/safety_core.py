@@ -92,6 +92,7 @@ class SafetyCore(StopKernel):
             raise
         finally:self.connecting=False
     def receive_packet(self,packet,link_epoch):self.packet(packet,link_epoch)
+    def _motion_blocked_after_report(self,report):return bool(self.fault_id) or not bool(self.grant_id)
     def packet(self,packet,epoch):
         if not self.connected or epoch!=self.link_epoch:return
         try:report=parse_telemetry(packet)
@@ -102,7 +103,6 @@ class SafetyCore(StopKernel):
         if len(self.ring)==self.ring.maxlen:self.ring_overflow=True
         self.ring.append(dict(seq=self.telemetry_seq,link_epoch=epoch,hex=packet.hex()))
         super().packet(packet,epoch)
-        self.blocked=bool(self.fault_id) or not bool(self.grant_id)
     async def write(self,packet,generation,motion=None,before_write=None):
         from . import control_core
         async with self.lock:

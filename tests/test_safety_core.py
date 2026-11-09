@@ -20,6 +20,32 @@ class SafetyCoreTests(unittest.IsolatedAsyncioTestCase):
             await asyncio.gather(*list(self.core.tasks),return_exceptions=True)
     async def flush(self):
         for _ in range(30):await asyncio.sleep(0)
+    def assert_packet_blocked(self,packet,expected,state='ready'):
+        events=[];unsubscribe=self.core.subscribe(events.append)
+        try:self.backend.packet(packet)
+        finally:unsubscribe()
+        self.assertIs(self.core.blocked,expected)
+        self.assertEqual(events[-1]['event'],'state')
+        self.assertEqual(events[-1]['data'],dict(state=state,connected=True,blocked=self.core.blocked))
+    async def test_state_block_matches_with_latched_fault(self):
+        self.core.trip('test failure');await self.flush();self.backend.packet(report());await self.flush()
+        self.assertIsNotNone(self.core.fault_id)
+        self.assert_packet_blocked(report(),True)
+    async def test_state_block_matches_without_grant(self):
+        self.assertIsNone(self.core.grant_id)
+        self.assert_packet_blocked(report(),True)
+    async def test_state_block_matches_granted_stopped_report(self):
+        await self.arm()
+        self.assertIsNotNone(self.core.grant_id)
+        self.assert_packet_blocked(report(),False)
+    async def test_state_block_matches_moving_report_while_stopping(self):
+        await self.arm()
+        task=asyncio.create_task(self.core.stop('user'));await self.flush()
+        self.assertFalse(task.done())
+        # A pending Stop blocks at dispatch; the report gate still follows the grant.
+        self.assert_packet_blocked(report(1000,1),False,state='stopping')
+        self.assertTrue(self.core.recovery)
+        self.backend.packet(report());self.assertTrue((await task)['confirmed'])
     async def test_fault_latch_survives_stopped_report(self):
         self.core.trip('test failure');await self.flush();self.backend.packet(report());await self.flush()
         self.assertEqual(self.core.snapshot()['authorization_state'],'fault-latched')

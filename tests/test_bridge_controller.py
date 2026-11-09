@@ -67,6 +67,36 @@ class ControllerTests(unittest.IsolatedAsyncioTestCase):
         return await self.controller.dispatch(owner, dict(v=1, id=request_id or str(self.serial), op=op,
             generation=self.controller.generation if generation is None else generation, args=args or {}))
 
+    def assert_packet_blocked(self, packet, expected, state='ready'):
+        self.events.clear()
+        self.backend.packet(packet)
+        self.assertIs(self.controller.blocked, expected)
+        self.assertEqual(self.events[-1]['event'], 'state')
+        self.assertEqual(self.events[-1]['data'], dict(state=state, connected=True, blocked=self.controller.blocked))
+
+    async def test_state_block_matches_with_storage_fault(self):
+        self.controller.storage_fault = 'disk full'
+        self.assert_packet_blocked(report(), True)
+
+    async def test_state_block_matches_without_owner(self):
+        # The kernel has no grant; ownership alone does not change its report gate.
+        self.controller.owner = None
+        self.assert_packet_blocked(report(), False)
+
+    async def test_state_block_matches_owned_stopped_report(self):
+        self.controller.blocked = self.controller.recovery = True
+        self.assert_packet_blocked(report(), False)
+        self.assertFalse(self.controller.recovery)
+
+    async def test_state_block_matches_moving_report_while_stopping(self):
+        task = asyncio.create_task(self.call('stop'))
+        await self.flush()
+        self.assertFalse(task.done())
+        self.assert_packet_blocked(report(1000, 1), True, state='stopping')
+        self.assertTrue(self.controller.recovery)
+        self.backend.packet(report())
+        self.assertTrue((await task)['confirmed'])
+
     async def test_single_owner_and_bounds(self):
         with self.assertRaises(ValueError): await self.call('start', owner='two')
         for speed in (999, 6001, True, 1050, '1000'):

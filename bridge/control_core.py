@@ -273,6 +273,12 @@ class Controller:
                 before_write()
             await asyncio.wait_for(self.backend.write(packet), STOP_TIMEOUT)
 
+    def _motion_blocked_after_report(self, report):
+        if not (self.stop_task and not self.stop_task.done()):
+            if report.stopped or (self.initial_report and not self.recovery):
+                return bool(self.storage_fault)
+        return self.blocked
+
     def packet(self, packet, epoch):
         if epoch != self.link_epoch or not self.connected:
             return
@@ -292,12 +298,10 @@ class Controller:
                 and self.sequence > self.stop_min_sequence and report.stopped):
             self.stop_report.set_result(True)
         stopping = self.stop_task and not self.stop_task.done()
+        self.blocked = self._motion_blocked_after_report(report)
         if not stopping:
             if report.stopped:
-                self.blocked = bool(self.storage_fault)
                 self.recovery = False
-            elif self.initial_report and not self.recovery:
-                self.blocked = bool(self.storage_fault)
             self.initial_report = False
         self.emit('state', state='stopping' if stopping else 'ready', connected=True, blocked=self.blocked)
         if not self.heartbeat_pending:
