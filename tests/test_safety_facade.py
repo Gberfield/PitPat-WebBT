@@ -82,3 +82,82 @@ class InterruptedRecordTests(unittest.IsolatedAsyncioTestCase):
         await self.call('take_control')
         self.assertTrue(self.facade.snapshot_for('tray')['is_owner'])
         self.assertEqual(self.server.core.backend.state,3)
+
+class FakeSafetyClient:
+    def __init__(self):
+        self.available=True;self.calls=[]
+        self.snapshot=dict(owner_id='browser',grant_id='grant',authorization_state='ready')
+    def subscribe(self,callback):return lambda:None
+    async def request(self,op,args):self.calls.append(op);return {}
+
+class QueuedInterruptTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from bridge.recorder import Recorder
+        from bridge.store import WalkStore
+        from tests.test_bridge_recorder import sample
+        self.tmp=tempfile.TemporaryDirectory()
+        self.rec=Recorder(WalkStore(Path(self.tmp.name)/'walks.sqlite3'))
+        await self.rec.observe(sample())
+        self.ctrl=await self.make_controller();self.serial=0
+        self.ctrl.register_client('browser','browser')
+    async def make_controller(self):return Controller(FakeSafetyClient(),recorder=self.rec)
+    async def asyncTearDown(self):
+        await self.ctrl.recording.close()
+        for task in list(self.ctrl.tasks):task.cancel()
+        await asyncio.gather(*list(self.ctrl.tasks),return_exceptions=True)
+        self.tmp.cleanup()
+    async def call(self,op,args=None):
+        self.serial+=1
+        return await self.ctrl.dispatch('browser',dict(id=str(self.serial),op=op,generation=self.ctrl.generation,args=args or {}))
+    async def assert_motion_blocked(self):
+        for op in ('start','pause','set_speed'):
+            with self.assertRaisesRegex(ValueError,'Resolve interrupted tracking'):await self.call(op,{'speed':1000})
+    def interrupt(self,kind):
+        payload='Safety telemetry gap; coverage partial' if kind=='interrupt' else ({'fault_id':'synthetic'},[])
+        self.assertTrue(self.ctrl.record(kind,payload))
+    async def check_queued_interrupt(self,kind,choice):
+        # No yield between offer and dispatch: the recording worker has not run.
+        self.ctrl.record('before_start',None)
+        self.interrupt(kind)
+        await self.assert_motion_blocked()
+        self.assertEqual(self.rec.snapshot()['status'],'running')
+        self.assertEqual(self.ctrl.recording.pending_interrupts,1)
+        updates=[];self.ctrl.subscribe(lambda e:updates.append(self.ctrl.tracking_review) if e['event']=='walk' else None)
+        await self.ctrl.recording.drain()
+        self.assertTrue(all(updates),'An earlier non-interrupted update cleared the queued interrupt')
+        await self.assert_motion_blocked()
+        await self.call('resolve_session',{'session_id':self.rec.snapshot()['sessionId'],'choice':choice})
+        self.assertFalse(self.ctrl.tracking_review)
+        self.assertEqual(self.ctrl.recording.pending_interrupts,0)
+        await self.call('set_speed',{'speed':1000})
+    async def test_queued_interrupt_blocks_until_continue(self):await self.check_queued_interrupt('interrupt','continue')
+    async def test_queued_safety_evidence_blocks_until_new(self):await self.check_queued_interrupt('safety_evidence','new')
+    async def test_resolution_cannot_clear_a_later_interrupt(self):
+        self.interrupt('interrupt');await self.ctrl.recording.drain()
+        sid=self.rec.snapshot()['sessionId'];updates=[]
+        self.ctrl.subscribe(lambda e:updates.append((self.rec.snapshot(),self.ctrl.tracking_review,self.ctrl.recording.pending_interrupts,self.ctrl.recording.queue.qsize())) if e['event']=='walk' else None)
+        self.ctrl.record('resolve',(sid,'continue'))
+        self.interrupt('safety_evidence')
+        self.ctrl.record('before_start',None)
+        await self.ctrl.recording.drain()
+        self.assertEqual(updates[0][0]['status'],'paused');self.assertTrue(updates[0][1]);self.assertEqual(updates[0][2],1)
+        await self.assert_motion_blocked()
+        # Unrelated work behind a successful resolution must not keep the gate latched.
+        updates.clear();self.ctrl.record('resolve',(sid,'new'));self.ctrl.record('before_start',None)
+        await self.ctrl.recording.drain()
+        self.assertIsNone(updates[0][0]);self.assertFalse(updates[0][1]);self.assertGreater(updates[0][3],0)
+        await self.call('set_speed',{'speed':1000})
+    async def test_rejected_interrupt_offer_keeps_motion_blocked(self):
+        await self.ctrl.recording.close()
+        self.assertFalse(self.ctrl.record('interrupt','Closed recorder'))
+        await self.assert_motion_blocked()
+
+class KernelQueuedInterruptTests(QueuedInterruptTests):
+    async def make_controller(self):
+        from bridge.control_core import Controller as KernelController
+        from tests.test_bridge_controller import FakeBackend,report
+        backend=FakeBackend();ctrl=KernelController(backend,clock=lambda:0,recorder=self.rec)
+        await ctrl.dispatch('browser',dict(op='discover'))
+        await ctrl.dispatch('browser',dict(op='connect',generation=0,args={'device_id':'synthetic'}))
+        backend.packet(report(1000,1));await ctrl.recording.drain()
+        return ctrl
