@@ -121,3 +121,17 @@ still held as an interrupted record (left open when the bridge last stopped).
   readiness" with no fault; **Claim control to resolve record** appeared, the
   continuity choice enabled, **Take control while stopped** then gave the tray
   control, and the owner started a walk from the tray.
+
+### November 9, 2026: the state-machine fixes on the treadmill
+
+Checked on the installed app after #51–#54 were merged, running from `main` at
+`fd30512`. Both services were restarted together, after the safety agent was
+loaded again following a reboot.
+
+- [x] A normal Connect, walk and Stop from the tray: the owner reported that it
+  went perfectly. The new `recording_review` gate (#50) didn't block the walk, and
+  the application and safety process from the same version understood each other.
+  `bridge.log` showed only normal startup lines after the restart, and
+  `safety.log` was unchanged since November 4. Not exercised: an interrupted
+  record that needs review, and a telemetry gap during a walk; those remain
+  covered by the simulator and fake-backend tests only.
