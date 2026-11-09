@@ -37,7 +37,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
             await server.serve();client=safety_client.SafetyClient(server.runtime,'application')
             try:
                 await client.open();await asyncio.sleep(.05)
-                self.assertTrue(server.core.health.healthy)
+                self.assertTrue(server.core.health.answered)
                 self.assertIsNone(server.core.grant_id)
                 self.assertFalse(server.core.connected)
                 devices=await client.request('discover',{})
@@ -52,7 +52,7 @@ class ClientTests(unittest.IsolatedAsyncioTestCase):
                 await asyncio.gather(client.open(),client.open(),client.open())
                 await asyncio.sleep(.05)
                 self.assertTrue(client.available)
-                self.assertTrue(server.core.health.healthy)
+                self.assertTrue(server.core.health.answered)
                 self.assertIsNone(server.core.grant_id)
                 self.assertFalse(server.core.connected)
             finally:await client.close();await server.close()

@@ -11,14 +11,16 @@ TELEMETRY_TIMEOUT=5.0
 class HealthMonitor:
     def __init__(self,clock=boot_seconds):
         self.clock=clock;self.bridge_id=None;self.last=None;self.sequence=0
-        self.accepted_sequence=0;self.pending={};self.healthy=False
+        self.accepted_sequence=0;self.pending={};self.answered=False
     def attach(self,bridge_id):
         if self.bridge_id is not None:raise ValueError('Application already attached')
-        self.bridge_id=bridge_id;self.last=self.clock();self.pending={};self.healthy=False
+        self.bridge_id=bridge_id;self.last=self.clock();self.pending={};self.answered=False
     def detach(self):
-        self.bridge_id=None;self.last=None;self.pending={};self.healthy=False
+        self.bridge_id=None;self.last=None;self.pending={};self.answered=False
     def expired(self):
         return self.last is None or self.clock()-self.last>=HEALTH_TIMEOUT
+    def is_healthy(self):
+        return self.answered and not self.expired()
     def issue_challenge(self):
         self.sequence+=1;now=self.clock()
         self.pending={k:v for k,v in self.pending.items() if now-v[1]<HEALTH_TIMEOUT}
@@ -31,6 +33,6 @@ class HealthMonitor:
         item=self.pending.pop(seq,None)
         if (item is None or type(seq) is not int or seq<=self.accepted_sequence
             or frame.get('nonce')!=item[0] or self.clock()-item[1]>=HEALTH_TIMEOUT):return False
-        self.accepted_sequence=seq;self.last=self.clock();self.healthy=True
+        self.accepted_sequence=seq;self.last=self.clock();self.answered=True
         self.pending={k:v for k,v in self.pending.items() if k>seq}
         return True

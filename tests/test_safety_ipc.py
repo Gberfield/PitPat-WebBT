@@ -24,7 +24,7 @@ class ReviewBacklogTests(unittest.IsolatedAsyncioTestCase):
         self.tmp=tempfile.TemporaryDirectory();self.core=SafetyCore(SimulatorBackend(),clock=lambda:0)
         self.server=safety_ipc.SafetyServer(self.core,Path(self.tmp.name)/'s')
         self.client=SafetyClient(self.server.runtime,'app');await self.open_connection()
-        await self.wait_until(lambda:self.core.health.healthy)
+        await self.wait_until(lambda:self.core.health.answered)
         await self.client.request('discover',{})
         await self.client.request('connect',dict(device_id='simulator-ba09'))
         await self.client.request('recording_ready',dict(ready=True,revision=1,fault_id=None))
