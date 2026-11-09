@@ -62,7 +62,64 @@ class SafetyCoreTests(unittest.IsolatedAsyncioTestCase):
     async def arm(self):
         a=self.core.authority()
         await self.core.handle_application('recording_ready',a,{'ready':True,'revision':1,'fault_id':None})
+        await self.review(False,1)
         await self.core.handle_application('acquire',self.core.authority(),{'owner_id':'owner','owner_kind':'browser'})
+    async def review(self,review,revision):
+        return await self.core.handle_application('recording_review',self.core.authority(),dict(review=review,revision=revision))
+    async def test_review_cancels_queued_motion_without_revoking_authority(self):
+        await self.arm();grant=self.core.grant_id
+        await self.core.lock.acquire()
+        motion=asyncio.create_task(self.core.handle_application('set_speed',self.core.authority(),{'speed':2000}))
+        try:
+            await self.flush();self.assertTrue(self.core.motion_pending)
+            await self.review(True,2)
+            # Clearing review before the writer runs must not revive old motion.
+            await self.review(False,3)
+        finally:self.core.lock.release()
+        with self.assertRaises(safety_core.CommandCancelled):await motion
+        self.assertEqual([p for p in self.backend.writes if len(p)==23],[]);self.assertEqual(self.core.target_speed,1000)
+        self.assertIsNone(self.core.fault_id);self.assertEqual(self.core.grant_id,grant)
+        self.assertFalse(self.core.blocked);self.assertFalse(self.core.recovery)
+        self.assertFalse(self.core.stop_task and not self.core.stop_task.done())
+        await self.core.handle_application('set_speed',self.core.authority(),{'speed':2000})
+    async def test_review_blocks_motion_but_allows_renewal_and_stop(self):
+        await self.arm();grant=self.core.grant_id
+        self.backend.packet(report(1000,1));await self.flush();self.backend.writes.clear()
+        renewed=self.core.renewed;last_valid=self.core.last_valid;health=self.core.health.__dict__.copy()
+        self.assertTrue((await self.review(True,2))['recording_review'])
+        self.assertEqual(self.core.renewed,renewed);self.assertEqual(self.core.last_valid,last_valid)
+        self.assertEqual(self.core.health.__dict__,health)
+        for op in ('start','pause','set_speed'):
+            with self.assertRaisesRegex(ValueError,'review'):await self.core.handle_application(op,self.core.authority(),{'speed':1000})
+        await self.core.handle_application('renew',self.core.authority(),{'renewal_seq':1})
+        self.assertEqual([p for p in self.backend.writes if len(p)==23],[]);self.assertIsNone(self.core.fault_id)
+        self.assertEqual(self.core.grant_id,grant)
+        stop=asyncio.create_task(self.core.handle_application('stop',self.core.authority(),{}))
+        await self.flush();self.backend.packet(report())
+        self.assertTrue((await stop)['confirmed']);self.assertIsNone(self.core.fault_id)
+        self.assertEqual(self.core.grant_id,grant)
+    async def test_review_does_not_block_acquire_or_explicit_recovery(self):
+        await self.core.handle_application('recording_ready',self.core.authority(),dict(ready=True,revision=1,fault_id=None))
+        owner=dict(owner_id='owner',owner_kind='browser')
+        await self.core.handle_application('acquire',self.core.authority(),owner)
+        self.assertTrue(self.core.recording_review);self.assertIsNotNone(self.core.grant_id)
+        with self.assertRaisesRegex(ValueError,'review'):await self.core.handle_application('start',self.core.authority(),{'speed':1000})
+        self.core.trip('Synthetic fault');await self.flush();self.backend.packet(report());await self.flush()
+        await self.core.handle_application('recording_ready',self.core.authority(),dict(ready=True,revision=2,fault_id=self.core.fault_id))
+        await self.core.handle_application('recover',self.core.authority(),dict(**owner,fault_id=self.core.fault_id,stop_confirmation_id=self.core.stop_confirmation_id))
+        self.assertTrue(self.core.recording_review);self.assertIsNone(self.core.fault_id);self.assertIsNotNone(self.core.grant_id)
+    async def test_review_revisions_and_application_reset(self):
+        self.assertTrue(self.core.snapshot()['recording_review'])
+        await self.review(False,5)
+        for revision in (4,5):
+            with self.assertRaisesRegex(ValueError,'Obsolete'):await self.review(True,revision)
+        self.assertFalse(self.core.recording_review)
+        # Disconnect only the application; avoid conflating reset with the existing link-loss fault.
+        self.core.connected=False
+        self.core.detach_application('other');self.assertFalse(self.core.recording_review)
+        self.core.detach_application('app');self.assertTrue(self.core.recording_review)
+        self.core.attach_application('next');self.assertTrue(self.core.recording_review)
+        await self.review(False,0);self.assertFalse(self.core.recording_review)
     async def test_renewals_do_not_exhaust_motion_command_budget(self):
         from dataclasses import replace
         await self.arm()

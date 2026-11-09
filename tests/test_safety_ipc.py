@@ -34,6 +34,7 @@ class SafetyIPCTests(unittest.IsolatedAsyncioTestCase):
                 await client.request('discover',{})
                 await client.request('connect',{'device_id':'simulator-ba09'})
                 await client.request('recording_ready',{'ready':True,'revision':1,'fault_id':None})
+                await client.request('recording_review',{'review':False,'revision':1})
                 await client.request('acquire',{'owner_id':'owner','owner_kind':'browser'})
                 await client.request('start',{'speed':1000})
                 # Control queue fills synchronously, independent of client's reads.

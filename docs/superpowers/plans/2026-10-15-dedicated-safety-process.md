@@ -101,7 +101,7 @@ Define these names in Task 1; later tasks must not invent alternate spellings.
 - `SafetySnapshot`: `safety_id`, `link_epoch`, `fault_generation`, `fault_id`,
   `link_state`, `authorization_state`, `bridge_healthy`, `owner_id`, `owner_kind`,
   `grant_id`, `target_speed`, `telemetry_seq`, `telemetry_hex`, `stale`,
-  `stop_confirmation_id`, `stop_outcome`, `recording_ready`, `ring_first_seq`,
+  `stop_confirmation_id`, `stop_outcome`, `recording_ready`, `recording_review`, `ring_first_seq`,
   `ring_last_seq`, `ring_overflow`. Missing physical values remain null/unknown.
 - Hello: `{v:1,op:"hello",kind:"application",bridge_id}` or
   `{v:1,op:"hello",kind:"helper"}`. IDs are opaque random strings, 1–64 chars.
@@ -111,11 +111,11 @@ Define these names in Task 1; later tasks must not invent alternate spellings.
   null and permit only `observe`, `evidence`, `stop`.
 - Operations: `observe`, `evidence`, `discover`, `connect`, `acquire`, `renew`,
   `release`, `start`, `pause`, `set_speed`, `stop`, `stop_disconnect`,
-  `recording_ready`, `recover`. Reject extra fields and unknown operations.
+  `recording_ready`, `recording_review`, `recover`. Reject extra fields and unknown operations.
 - Command args: connect `{device_id}`; acquire `{owner_id,owner_kind}`;
   renew `{renewal_seq}`; set_speed `{speed}`; start/pause `{speed}` with existing
   validated minimum default; evidence `{after_seq,limit}` (limit 1–256);
-  recording_ready `{ready,revision,fault_id}`; recover
+  recording_ready `{ready,revision,fault_id}`; recording_review `{review,revision}`; recover
   `{fault_id,stop_confirmation_id,owner_id,owner_kind}`; other args empty.
 - Reply: `{v:1,id,ok,result,error,snapshot}`; result contains `outcome` from
   `accepted|written|stopped_confirmed|unconfirmed` where applicable. A successful
@@ -129,6 +129,29 @@ Define these names in Task 1; later tasks must not invent alternate spellings.
 
 Socket framing is UTF-8 newline-delimited JSON; 16 KiB includes the newline.
 Never put browser tokens or personal workout exports into this protocol.
+
+November 9, 2026 update (issue #50): `recording_review` is an application-only,
+non-fault motion gate. `review` must be bool; `revision` must be a nonnegative
+integer (not bool), strictly newer than the last accepted review revision.
+Review and readiness have independent revision counters. Safety starts with
+review true and resets it to true, with revision -1, on application attach/detach;
+the application must explicitly publish false before motion is permitted.
+Setting review true invalidates queued motion at the serialized writer, and
+Start/Pause/Set speed also check it at dispatch and immediately before writing.
+Clearing review does not revive cancelled requests. Review alone never trips a
+fault, sends Stop, clears a grant or changes health/telemetry/lease deadlines.
+Stop, owner loss, release, acquire, recovery and lease renewals retain their
+existing checks and behavior while review is true.
+
+The application sends review true synchronously when an interrupt or safety
+evidence is queued, before yielding to recording work; a resolved record's
+`recorded()` update publishes false. These notifications write immediately on
+the IPC socket without awaiting a reply in the telemetry callback. A failed or
+rejected notification makes the connection unavailable; reattachment remains
+fail-closed. Initialization, readiness publication and safety reconnect republish
+the current review state, including when an interrupted record withholds
+readiness. Telemetry sequence gaps use review rather than withdrawing
+`recording_ready`, whose false value still trips the existing recording fault.
 
 ### Task 1: Define contract, clock and authority validation
 

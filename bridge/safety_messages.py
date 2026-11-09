@@ -25,6 +25,7 @@ ARGS={'observe':set(),'evidence':{'after_seq','limit'},'discover':set(),
       'connect':{'device_id'},'acquire':{'owner_id','owner_kind'},'renew':{'renewal_seq'},
       'release':set(),'owner_lost':set(),'start':{'speed'},'pause':{'speed'},'set_speed':{'speed'},
       'stop':set(),'stop_disconnect':set(),'recording_ready':{'ready','revision','fault_id'},
+      'recording_review':{'review','revision'},
       'recover':{'fault_id','stop_confirmation_id','owner_id','owner_kind'}}
 def identifier(value):return isinstance(value,str) and 1<=len(value)<=64
 
@@ -53,6 +54,7 @@ def validate_frame(frame,role):
         if k in args and (type(args[k]) is not int or args[k]<0):raise ValueError('Invalid counter')
     if op=='evidence' and not 1<=args['limit']<=256:raise ValueError('Invalid limit')
     if op=='recording_ready' and type(args['ready']) is not bool:raise ValueError('Invalid readiness')
+    if op=='recording_review' and type(args['review']) is not bool:raise ValueError('Invalid review')
     for k in ('fault_id','stop_confirmation_id'):
         if k in args and args[k] is not None and not identifier(args[k]):raise ValueError('Invalid confirmation identity')
     return frame
