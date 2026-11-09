@@ -28,8 +28,11 @@ On November 9, 2026 a review of the code's implicit state machines was recorded 
 GitHub issues #33–#48, tracked in #49, and four fixes were merged through the Codex
 handoff workflow ([PLAN.md](../PLAN.md), briefs in [docs/handoffs/](handoffs/)).
 Each fix had a Codex review, and the three safety fixes also had adversarial reviews.
-All were tested with the simulator and fakes only; none has been checked on the
-treadmill yet.
+All were tested with the simulator and fakes only. The same day, after a restart
+onto `main`, the owner walked on the treadmill with them installed: a normal
+Connect, walk and Stop worked; see [macOS acceptance](macos-acceptance.md). The
+review gate's blocking paths (an interrupted record that needs review, a telemetry
+gap mid-walk) have not been exercised on hardware.
 
 - **#41 (PR #51):** the application blocks motion the moment an interrupt is
   queued, not only once the interrupted record has been written.
@@ -47,11 +50,11 @@ treadmill yet.
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
   repository checkout on `main`. Physical acceptance passed on October 29, 2026; see
-  [macOS acceptance](macos-acceptance.md). The November 9 fixes are in the
-  checkout but take effect only when the services restart: Stop & Disconnect, quit
-  the menu bar app and open it again. Restart both services together, never one
-  alone: since #50, an application and safety process from before and after it
-  don't understand each other's review messages, and safety would trip a fault.
+  [macOS acceptance](macos-acceptance.md). The services were restarted onto the
+  November 9 fixes that day. After any future update, restart both services
+  together, never one alone: since #50, an application and safety process from
+  before and after it don't understand each other's review messages, and safety
+  would trip a fault.
 - **Linux (`desk`):** not checked since the October 19, 2026 handoff. Per
   [closeout handoff](closeout-handoff.md), its live services run from a retained
   `codex/dedicated-safety` worktree there, and that handoff's holds still apply. The
@@ -75,10 +78,7 @@ None of this is required. Each item waits on the owner.
 4. **`pitpat stop` with nothing connected.** It latches a fault, so the next Connect
    needs recovery. This was left unchanged on purpose: changing it means changing
    the recovery rules, which needs the owner's decision.
-5. **Check the November 9 fixes on the treadmill.** After restarting PitPat, a
-   normal Connect, walk and Stop confirms them on hardware. Only the simulator has
-   run them so far.
-6. **Open state-machine issues.** The other issues listed in #49 are recorded
+5. **Open state-machine issues.** The other issues listed in #49 are recorded
    refactors and documentation, not known bugs. The cheapest are #36 (write down
    the safety fault-recovery path) and #38 (rename `HealthMonitor.healthy`).
    #35 asks whether a stopped report that arrives before the treadmill has
