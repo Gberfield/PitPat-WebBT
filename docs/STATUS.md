@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: November 6, 2026 (EST). Update this file whenever the state below
+Last updated: November 9, 2026 (EST). Update this file whenever the state below
 changes. Read it first when picking the project up again.
 
 ## Where things stand
@@ -24,9 +24,34 @@ there: the owner claimed, resolved the record, took control and walked; see
 [macOS acceptance](macos-acceptance.md). Why the
 November 5 walk was left open is not known; the bridge log only shows restarts.
 
+On November 9, 2026 a review of the code's implicit state machines was recorded as
+GitHub issues #33–#48, tracked in #49, and four fixes were merged through the Codex
+handoff workflow ([PLAN.md](../PLAN.md), briefs in [docs/handoffs/](handoffs/)).
+Each fix had a Codex review, and the three safety fixes also had adversarial reviews.
+All were tested with the simulator and fakes only; none has been checked on the
+treadmill yet.
+
+- **#41 (PR #51):** the application blocks motion the moment an interrupt is
+  queued, not only once the interrupted record has been written.
+- **#44 (PR #52):** the browser records a walk as 'stopping', not 'starting',
+  while the belt slows after Stop.
+- **#34 (PR #53):** the stop kernel and `SafetyCore` share one rule for the
+  motion-blocked flag. Behaviour is unchanged.
+- **#50 (PR #54):** a new non-fault `recording_review` safety operation. Motion
+  already waiting for the safety writer is cancelled when an interrupted record
+  needs review, and new motion is refused until it is resolved. It never trips a
+  fault, stops the belt or clears the grant. Safety starts with review on and
+  resets it whenever the application attaches or detaches. The operation is
+  described in the
+  [dedicated-safety plan](superpowers/plans/2026-10-15-dedicated-safety-process.md).
+
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
   repository checkout on `main`. Physical acceptance passed on October 29, 2026; see
-  [macOS acceptance](macos-acceptance.md).
+  [macOS acceptance](macos-acceptance.md). The November 9 fixes are in the
+  checkout but take effect only when the services restart: Stop & Disconnect, quit
+  the menu bar app and open it again. Restart both services together, never one
+  alone: since #50, an application and safety process from before and after it
+  don't understand each other's review messages, and safety would trip a fault.
 - **Linux (`desk`):** not checked since the October 19, 2026 handoff. Per
   [closeout handoff](closeout-handoff.md), its live services run from a retained
   `codex/dedicated-safety` worktree there, and that handoff's holds still apply. The
@@ -50,11 +75,24 @@ None of this is required. Each item waits on the owner.
 4. **`pitpat stop` with nothing connected.** It latches a fault, so the next Connect
    needs recovery. This was left unchanged on purpose: changing it means changing
    the recovery rules, which needs the owner's decision.
+5. **Check the November 9 fixes on the treadmill.** After restarting PitPat, a
+   normal Connect, walk and Stop confirms them on hardware. Only the simulator has
+   run them so far.
+6. **Open state-machine issues.** The other issues listed in #49 are recorded
+   refactors and documentation, not known bugs. The cheapest are #36 (write down
+   the safety fault-recovery path) and #38 (rename `HealthMonitor.healthy`).
+   #35 asks whether a stopped report that arrives before the treadmill has
+   processed Stop can count as confirmation; answering it needs a treadmill test.
 
 ## Owner decisions
 
 Settled; don't reopen them without the owner. Newest first.
 
+- **November 9, 2026: record review is its own safety gate.** An interrupted walk
+  record that needs review blocks motion in the safety process through the non-fault
+  `recording_review` operation (#50), separate from recording readiness, whose
+  false value still trips a fault. The owner approved it as a separate task rather
+  than widening the #41 fix.
 - **November 4, 2026: PitPat never starts at login.** The owner opens PitPat when
   they want it. Opening the menu bar app starts both services, and quitting it
   stops them. Don't add `PitPat.app` to Login Items or set `RunAtLoad`. This is
