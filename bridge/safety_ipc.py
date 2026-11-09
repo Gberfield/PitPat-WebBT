@@ -106,6 +106,9 @@ class SafetyServer:
                     core.accept_health(frame);continue
                 try:
                     validate_frame(frame,role)
+                    if role=='application' and frame['op']=='recording_review':
+                        # This non-awaiting core path bypasses the backlog and precedes later frames.
+                        await command(frame);continue
                     urgent=frame['op']=='stop'
                     if len(pending)>=MAX_PENDING and not urgent:raise ValueError('Safety request backlog full')
                     if urgent and stopping:raise ValueError('Stop already pending')

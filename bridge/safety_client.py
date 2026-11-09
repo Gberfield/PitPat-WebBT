@@ -11,6 +11,7 @@ class SafetyClient:
         self.runtime=Path(runtime_dir);self.bridge_id=bridge_id;self.snapshot={};self.writer=None
         self.serial=0;self.command_seq=0;self.grant_id=None;self.pending={};self.listeners=set();self.reader_task=None;self.watch_task=None
         self.last_received=0;self.available=False;self.seq=-1;self.open_lock=asyncio.Lock()
+        self.notifications=set()
     def subscribe(self,callback):self.listeners.add(callback);return lambda:self.listeners.discard(callback)
     def emit(self,message):
         for c in tuple(self.listeners):
@@ -23,6 +24,10 @@ class SafetyClient:
             # This callback shares the application's command/HTTP event loop.
             self.send(dict(v=1,op='health',**{k:message[k] for k in ('safety_id','bridge_id','challenge_seq','nonce')}))
         elif message.get('id'):
+            if message['id'] in self.notifications:
+                self.notifications.discard(message['id'])
+                if not message.get('ok'):self.unavailable()
+                return
             future=self.pending.get(message['id'])
             if future and not future.done():
                 if message.get('ok'):future.set_result(message.get('result'))
@@ -52,6 +57,14 @@ class SafetyClient:
         if len(raw)>MAX_FRAME:raise ValueError('Safety message too large')
         self.writer.write(raw)
         if self.writer.transport.get_write_buffer_size()>MAX_FRAME*8:raise ValueError('Safety output stalled')
+    def notify(self,op,args):
+        # Send on the callback's stack, before any later motion request can enter the socket.
+        if not self.available:raise ValueError('Safety unavailable')
+        self.serial+=1;key=str(self.serial);s=self.snapshot
+        a=Authority(s['safety_id'],s['link_epoch'],s['fault_generation'],self.bridge_id,s['grant_id'],self.command_seq)
+        self.notifications.add(key)
+        try:self.send(dict(v=1,id=key,op=op,authority=a.json(),args=args))
+        except (OSError,ValueError):self.unavailable();raise
     async def read(self):
         try:
             while raw:=await self.reader.readline():
@@ -65,6 +78,7 @@ class SafetyClient:
             if boot_seconds()-self.last_received>=2.05:self.unavailable()
     def unavailable(self):
         was=self.available;self.available=False
+        self.notifications.clear()
         if self.writer:self.writer.close()
         for future in self.pending.values():
             if not future.done():future.set_exception(ValueError('Safety connection lost; Stop unconfirmed'))

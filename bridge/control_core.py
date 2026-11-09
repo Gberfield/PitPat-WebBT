@@ -94,6 +94,8 @@ class Controller:
 
     def record(self, kind, payload=None):
         if self.recording:
+            if kind in ('interrupt', 'safety_evidence'):
+                self.motion_generation += 1
             self.tracking_review = self.tracking_review or self.recording.requires_review(kind=kind)
             return self.recording.offer(kind, payload)
         return True

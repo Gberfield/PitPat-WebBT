@@ -17,6 +17,7 @@ class SafetyCore(StopKernel):
         self.grant_id=None;self.owner_id=None;self.owner_kind=None
         self.command_seq=-1;self.motion_count=0;self.renewal_seq=-1;self.last_renewal=None
         self.recording_ready=False;self.readiness_revision=-1
+        self.recording_review=True;self.review_revision=-1
         self.stop_confirmation_id=None;self.confirmed_at=None
         self.telemetry_seq=0;self.ring=deque(maxlen=256);self.ring_overflow=False
         self.link_state='disconnected';self.motion_pending=False;self.closing=False
@@ -29,7 +30,7 @@ class SafetyCore(StopKernel):
             grant_id=self.grant_id,target_speed=self.target_speed,telemetry_seq=self.telemetry_seq,
             telemetry_hex=self.last.packet.hex() if self.last else None,stale=stale,
             writer_uncertain=self.writer_uncertain,stop_confirmation_id=self.stop_confirmation_id,stop_outcome='stopped_confirmed' if self.stop_confirmation_id else 'unconfirmed',
-            recording_ready=self.recording_ready,ring_first_seq=self.ring[0]['seq'] if self.ring else 0,
+            recording_ready=self.recording_ready,recording_review=self.recording_review,ring_first_seq=self.ring[0]['seq'] if self.ring else 0,
             ring_last_seq=self.telemetry_seq,ring_overflow=self.ring_overflow,connected=self.connected,
             stopping=bool(self.stop_task and not self.stop_task.done()))
     def emit(self,event,**data):
@@ -43,9 +44,11 @@ class SafetyCore(StopKernel):
             except Exception:self.subscribers.discard(callback)
     def attach_application(self,bridge_id):
         self.health.attach(bridge_id);self.readiness_revision=-1;self.recording_ready=False
+        self.review_revision=-1;self.recording_review=True;self.motion_generation+=1
     def detach_application(self,bridge_id):
         if self.health.bridge_id!=bridge_id:return
         self.health.detach();self.readiness_revision=-1;self.recording_ready=False
+        self.review_revision=-1;self.recording_review=True;self.motion_generation+=1
         if self.connected or self.connecting:self.trip('Application connection lost')
     def accept_health(self,frame):
         if self.health.expired() and (self.connected or self.connecting):self.trip('Application health expired')
@@ -164,15 +167,16 @@ class SafetyCore(StopKernel):
         return result
     def authority(self):
         return Authority(self.safety_id,self.link_epoch,self.fault_generation,self.health.bridge_id,self.grant_id,self.command_seq+1)
-    def check_authority(self,a,*,motion=False):
+    def check_authority(self,a,*,motion=False,renewal=False):
         if isinstance(a,dict):a=Authority(**a)
         if (a.safety_id!=self.safety_id or a.link_epoch!=self.link_epoch or a.fault_generation!=self.fault_generation or a.bridge_id!=self.health.bridge_id):raise ValueError('Obsolete safety authority')
-        if motion:
+        if motion or renewal:
             if self.health.expired() or not self.health.healthy:self.trip('Application health expired')
             if self.grant_id and self.clock()-self.renewed>=OWNER_TIMEOUT:self.trip('Controller lease expired')
             if self.last_valid is None or self.clock()-self.last_valid>=5:self.trip('Telemetry expired')
             if (not self.grant_id or a.grant_id!=self.grant_id or self.fault_id or not self.recording_ready or not self.connected
                 or self.stop_task and not self.stop_task.done()):raise ValueError('Motion blocked; explicit recovery required')
+            if motion and self.recording_review:raise ValueError('Walk recording requires review')
             if a.command_seq<=self.command_seq:raise ValueError('Duplicate/out-of-order motion')
         return a
     def grant(self,args):
@@ -182,6 +186,14 @@ class SafetyCore(StopKernel):
         return self.snapshot()
     async def handle_application(self,op,authority,args):
         if self.closing and op not in ('observe','evidence','stop'):raise ValueError('Safety shutting down')
+        if op=='recording_review':
+            a=Authority(**authority) if isinstance(authority,dict) else authority
+            # Review belongs to the application attachment, independent of Bluetooth/fault transitions.
+            if a.safety_id!=self.safety_id or a.bridge_id!=self.health.bridge_id:raise ValueError('Obsolete safety authority')
+            if args['revision']<=self.review_revision:raise ValueError('Obsolete recording review')
+            self.review_revision=args['revision'];self.recording_review=args['review']
+            if self.recording_review:self.motion_generation+=1
+            return self.snapshot()
         a=self.check_authority(authority)
         if op=='observe':return self.snapshot()
         if op=='evidence':return self.evidence(args['after_seq'],args['limit'])
@@ -211,7 +223,7 @@ class SafetyCore(StopKernel):
                 self.fault_id=None;self.fault=None
             return self.grant(args)
         if op=='renew':
-            self.check_authority(a,motion=True)
+            self.check_authority(a,renewal=True) # Review blocks motion, not the existing lease/health checks.
             if args['renewal_seq']<=self.renewal_seq:raise ValueError('Old renewal')
             if self.last_renewal is not None and self.clock()-self.last_renewal<1:
                 self.command_seq=a.command_seq
@@ -225,7 +237,8 @@ class SafetyCore(StopKernel):
         self.motion_count+=1;self.motion_pending=True;self.command_seq=a.command_seq;epoch=self.motion_generation
         def before():
             self.check_authority(a) # command sequence is already consumed; recheck all live gates below.
-            if self.fault_id or self.health.expired() or not self.grant_id or self.clock()-self.renewed>=6 or self.last_valid is None or self.clock()-self.last_valid>=5:raise CommandCancelled('Motion authority expired at writer')
+            if self.recording_review:raise CommandCancelled('Walk recording requires review at writer')
+            if not self.recording_ready or self.fault_id or not self.health.healthy or self.health.expired() or not self.grant_id or a.grant_id!=self.grant_id or self.clock()-self.renewed>=6 or self.last_valid is None or self.clock()-self.last_valid>=5:raise CommandCancelled('Motion authority expired at writer')
         try:
             await self.write(encode_command(op,args['speed']),self.generation,epoch,before_write=before)
             if op=='set_speed':self.target_speed=args['speed']

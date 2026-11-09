@@ -10,7 +10,7 @@ class Controller:
         self.generation=0;self.sequence=0;self.tasks=set();self.subscribers=set();self.last=None
         self.connected=False;self.connecting=False;self.storage_fault=None;self.recording=None
         self.last_key=None;self.last_authority=None;self.seen=set();self.ready_revision=0;self.renewal_seq=0
-        self.tracking_review=False;self.current_fault=None;self.readiness_task=None;self.initializing=True
+        self.tracking_review=False;self.review_revision=0;self.current_fault=None;self.readiness_task=None;self.initializing=True
         self.reconnect_task=None;self.reconnect_after=0
         if recorder:
             from .recorder import RecordingWorker
@@ -68,21 +68,32 @@ class Controller:
             is_recovery_claimant=self.claimant==client_id,can_resolve_session=self.claimant==client_id or owner==client_id)
     def record(self,kind,payload=None):
         if self.recording:
-            self.tracking_review=self.tracking_review or self.recording.requires_review(kind=kind)
+            self.set_tracking_review(self.tracking_review or self.recording.requires_review(kind=kind))
             return self.recording.offer(kind,payload)
         return True
+    def set_tracking_review(self,review):
+        if review==self.tracking_review:return
+        self.tracking_review=review;self.publish_review()
+    def publish_review(self):
+        if not self.safety.available:return
+        self.review_revision+=1
+        try:self.safety.notify('recording_review',dict(review=self.tracking_review,revision=self.review_revision))
+        except (OSError,ValueError):pass # Reattachment starts fail-closed; publish_readiness retries the state.
     def recording_failed(self,message):
         self.storage_fault=message;self.emit('storage_fault',message=message)
         if self.safety.available:self.spawn(self.withdraw_readiness())
     def recorded(self,row):
-        self.tracking_review=self.recording.requires_review(row);self.emit('walk',session=self.session_summary())
+        self.set_tracking_review(self.recording.requires_review(row));self.emit('walk',session=self.session_summary())
     async def withdraw_readiness(self):
         self.ready_revision+=1
         try:await self.safety.request('recording_ready',dict(ready=False,revision=self.ready_revision,fault_id=self.safety.snapshot.get('fault_id')))
         except ValueError:pass
     async def publish_readiness(self):
-        if not self.safety.available or self.storage_fault:return
-        if self.recording:await self.recording.drain()
+        if not self.safety.available:return
+        if self.recording:
+            await self.recording.drain()
+            self.set_tracking_review(self.tracking_review or self.recording.requires_review(self.recording.recorder.snapshot()))
+        self.publish_review()
         if self.storage_fault or self.session_summary() and self.session_summary()['status']=='interrupted':return
         self.ready_revision+=1
         await self.safety.request('recording_ready',dict(ready=True,revision=self.ready_revision,fault_id=self.safety.snapshot.get('fault_id')))
@@ -177,6 +188,7 @@ class Controller:
             await self.safety.open()
             self.received(dict(event='snapshot'))
             await self.collect_safety_evidence()
+            await self.publish_readiness()
         except (OSError,ValueError,TimeoutError):
             pass  # Keep motion blocked; retry at a bounded cadence.
         finally:self.reconnect_after=self.clock()+1

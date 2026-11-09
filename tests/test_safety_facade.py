@@ -31,6 +31,15 @@ class FacadeTests(unittest.IsolatedAsyncioTestCase):
         await self.facade.client_lost('browser')
         self.assertIsNotNone(self.server.core.fault_id)
         self.assertIsNone(self.server.core.grant_id)
+    async def test_initialize_and_reconnect_publish_review_without_acquiring(self):
+        self.assertFalse(self.server.core.recording_review)
+        await self.facade.safety.close()
+        async with asyncio.timeout(1):
+            while self.server.application is not None:await asyncio.sleep(.001)
+        self.assertTrue(self.server.core.recording_review)
+        await self.facade.reconnect_safety()
+        self.assertTrue(self.facade.safety.available);self.assertFalse(self.server.core.recording_review)
+        self.assertIsNone(self.server.core.grant_id);self.assertIsNotNone(self.server.core.fault_id)
 
     async def test_shutdown_cancels_pending_safety_reconnect(self):
         await self.facade.safety.close()
@@ -63,6 +72,33 @@ class InterruptedRecordTests(unittest.IsolatedAsyncioTestCase):
     async def call(self,op,args=None):
         self.serial+=1
         return await self.facade.dispatch('tray',dict(id=str(self.serial),op=op,generation=self.facade.generation,args=args or {}))
+    async def test_recorded_review_change_during_connect_keeps_application_available(self):
+        from unittest.mock import patch
+        core=self.server.core;client=self.facade.safety;entered=asyncio.Event();release=asyncio.Event()
+        original=core.backend.connect
+        async def held_connect(*args):
+            entered.set();await release.wait();await original(*args)
+        devices=await self.call('discover');connection=None
+        with patch.object(core.backend,'connect',held_connect):
+            try:
+                connection=asyncio.create_task(self.call('connect',{'device_id':devices['devices'][0]['id']}))
+                await asyncio.wait_for(entered.wait(),1)
+                self.assertTrue(core.connecting);self.assertLess(client.snapshot['link_epoch'],core.link_epoch)
+                self.assertTrue(self.facade.tracking_review)
+                # Only the recorder update runs here; Connect publishes readiness after it finishes.
+                await self.facade.recording.submit('resolve',('left-open','new'))
+                self.assertFalse(self.facade.tracking_review)
+                async with asyncio.timeout(1):
+                    while client.notifications and client.available:await asyncio.sleep(0)
+                self.assertTrue(client.available);self.assertIsNotNone(self.server.application)
+                self.assertIsNone(core.fault_id);self.assertFalse(core.recording_review)
+                self.assertEqual(core.review_revision,self.facade.review_revision)
+                release.set();await connection
+                self.assertTrue(client.available);self.assertTrue(core.connected);self.assertIsNone(core.fault_id)
+                self.assertTrue(self.facade.snapshot_for('tray')['is_owner'])
+            finally:
+                release.set()
+                if connection:await asyncio.gather(connection,return_exceptions=True)
     async def test_tray_claims_resolves_and_takes_control_without_a_fault(self):
         devices=await self.call('discover')
         with self.assertRaisesRegex(ValueError,'recording readiness'):await self.call('connect',{'device_id':devices['devices'][0]['id']})
@@ -83,14 +119,59 @@ class InterruptedRecordTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(self.facade.snapshot_for('tray')['is_owner'])
         self.assertEqual(self.server.core.backend.state,3)
 
+class ReviewWriterTests(unittest.IsolatedAsyncioTestCase):
+    async def asyncSetUp(self):
+        from bridge.recorder import Recorder
+        from bridge.store import WalkStore
+        self.tmp=tempfile.TemporaryDirectory();root=Path(self.tmp.name)
+        self.server=SafetyServer(SafetyCore(SimulatorBackend()),root/'s');await self.server.serve()
+        self.facade=Controller(SafetyClient(self.server.runtime,'app'),recorder=Recorder(WalkStore(root/'walks.sqlite3')))
+        self.facade.register_client('browser','browser');await self.facade.initialize();self.serial=0
+        devices=await self.call('discover');await self.call('connect',{'device_id':devices['devices'][0]['id']})
+    async def asyncTearDown(self):await self.facade.shutdown();await self.server.close();self.tmp.cleanup()
+    async def call(self,op,args=None):
+        self.serial+=1
+        return await self.facade.dispatch('browser',dict(id=str(self.serial),op=op,generation=self.facade.generation,args=args or {}))
+    async def wait_until(self,predicate):
+        async with asyncio.timeout(1):
+            while not predicate():await asyncio.sleep(.001)
+    async def test_telemetry_gap_cancels_queued_speed_until_record_resolved(self):
+        from bridge.protocol import encode_command
+        from unittest.mock import patch
+        core=self.server.core;backend=core.backend;grant=core.grant_id
+        # Inject a running simulator observation, without waiting for its countdown.
+        backend.state=1;backend.speed=1000;backend.emit()
+        await self.wait_until(lambda:self.facade.session_summary() and self.facade.session_summary()['status']=='running')
+        await self.facade.recording.drain()
+        with patch.object(backend,'write',wraps=backend.write) as write:
+            await core.lock.acquire()
+            motion=asyncio.create_task(self.call('set_speed',{'speed':2000}))
+            try:
+                await self.wait_until(lambda:core.motion_pending)
+                core.telemetry_seq+=1;backend.emit() # One missing telemetry sequence on the real IPC stream.
+                await self.wait_until(lambda:self.facade.tracking_review)
+                await self.facade.recording.drain()
+                self.assertEqual(self.facade.session_summary()['status'],'interrupted')
+            finally:core.lock.release()
+            with self.assertRaisesRegex(ValueError,'Queued motion cancelled'):await motion
+            self.assertNotIn(encode_command('set_speed',2000),[c.args[0] for c in write.call_args_list])
+            self.assertEqual(backend.speed,1000);self.assertEqual(core.grant_id,grant);self.assertIsNone(core.fault_id)
+            with self.assertRaisesRegex(ValueError,'Resolve interrupted tracking'):await self.call('start')
+            sid=self.facade.session_summary()['sessionId']
+            await self.call('resolve_session',{'session_id':sid,'choice':'continue'})
+            self.assertFalse(core.recording_review)
+            await self.call('set_speed',{'speed':2000})
+            self.assertEqual(backend.speed,2000)
+
 class FakeSafetyClient:
     def __init__(self):
-        self.available=True;self.calls=[]
+        self.available=True;self.calls=[];self.notifications=[]
         self.snapshot=dict(owner_id='browser',grant_id='grant',authorization_state='ready')
     def subscribe(self,callback):return lambda:None
     async def request(self,op,args):self.calls.append(op);return {}
+    def notify(self,op,args):self.calls.append(op);self.notifications.append((op,args))
 
-class QueuedInterruptTests(unittest.IsolatedAsyncioTestCase):
+class RecordingControllerTestCase(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         from bridge.recorder import Recorder
         from bridge.store import WalkStore
@@ -130,6 +211,7 @@ class QueuedInterruptTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.ctrl.tracking_review)
         self.assertEqual(self.ctrl.recording.pending_interrupts,0)
         await self.call('set_speed',{'speed':1000})
+class QueuedInterruptTests(RecordingControllerTestCase):
     async def test_queued_interrupt_blocks_until_continue(self):await self.check_queued_interrupt('interrupt','continue')
     async def test_queued_safety_evidence_blocks_until_new(self):await self.check_queued_interrupt('safety_evidence','new')
     async def test_resolution_cannot_clear_a_later_interrupt(self):
@@ -152,6 +234,24 @@ class QueuedInterruptTests(unittest.IsolatedAsyncioTestCase):
         self.assertFalse(self.ctrl.record('interrupt','Closed recorder'))
         await self.assert_motion_blocked()
 
+class ReviewPublicationTests(RecordingControllerTestCase):
+    async def test_received_gap_sends_review_before_callback_returns(self):
+        from tests.test_bridge_controller import report
+        self.ctrl.last_key=('safety',1,1)
+        self.ctrl.safety.snapshot.update(safety_id='safety',link_epoch=1,telemetry_seq=3,telemetry_hex=report(1000,1).hex())
+        self.ctrl.received(dict(event='telemetry'))
+        self.assertEqual(self.ctrl.safety.notifications,[('recording_review',dict(review=True,revision=1))])
+        self.assertEqual(self.rec.snapshot()['status'],'running')
+        await self.ctrl.recording.drain()
+        await self.call('resolve_session',{'session_id':self.rec.snapshot()['sessionId'],'choice':'continue'})
+        self.assertFalse(self.ctrl.safety.notifications[-1][1]['review'])
+    async def test_readiness_republishes_latched_review_after_unavailable_send(self):
+        self.ctrl.safety.available=False;self.interrupt('interrupt')
+        self.assertEqual(self.ctrl.safety.notifications,[])
+        self.ctrl.safety.available=True;await self.ctrl.publish_readiness()
+        self.assertTrue(self.ctrl.safety.notifications[-1][1]['review'])
+        self.assertNotIn('recording_ready',self.ctrl.safety.calls)
+
 class KernelQueuedInterruptTests(QueuedInterruptTests):
     async def make_controller(self):
         from bridge.control_core import Controller as KernelController
@@ -161,3 +261,18 @@ class KernelQueuedInterruptTests(QueuedInterruptTests):
         await ctrl.dispatch('browser',dict(op='connect',generation=0,args={'device_id':'synthetic'}))
         backend.packet(report(1000,1));await ctrl.recording.drain()
         return ctrl
+    async def test_queued_interrupt_cancels_motion_waiting_for_writer(self):
+        from bridge.control_core import CommandCancelled
+        from bridge.protocol import encode_command
+        for kind in ('interrupt','safety_evidence'):
+            with self.subTest(kind=kind):
+                await self.ctrl.lock.acquire()
+                motion=asyncio.create_task(self.call('set_speed',{'speed':2000}))
+                try:
+                    for _ in range(20):await asyncio.sleep(0)
+                    self.assertFalse(motion.done())
+                    self.interrupt(kind);await self.ctrl.recording.drain()
+                finally:self.ctrl.lock.release()
+                with self.assertRaises(CommandCancelled):await motion
+                self.assertNotIn(encode_command('set_speed',2000),self.ctrl.backend.writes)
+                await self.call('resolve_session',{'session_id':self.rec.snapshot()['sessionId'],'choice':'continue'})
