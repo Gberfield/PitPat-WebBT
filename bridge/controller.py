@@ -67,12 +67,15 @@ class Controller:
             stop_confirmation_id=s.get('stop_confirmation_id'),authorization_state=s.get('authorization_state','unarmed'),
             is_recovery_claimant=self.claimant==client_id,can_resolve_session=self.claimant==client_id or owner==client_id)
     def record(self,kind,payload=None):
-        return self.recording.offer(kind,payload) if self.recording else True
+        if self.recording:
+            self.tracking_review=self.tracking_review or self.recording.requires_review(kind=kind)
+            return self.recording.offer(kind,payload)
+        return True
     def recording_failed(self,message):
         self.storage_fault=message;self.emit('storage_fault',message=message)
         if self.safety.available:self.spawn(self.withdraw_readiness())
     def recorded(self,row):
-        self.tracking_review=bool(row and row['status']=='interrupted');self.emit('walk',session=self.session_summary())
+        self.tracking_review=self.recording.requires_review(row);self.emit('walk',session=self.session_summary())
     async def withdraw_readiness(self):
         self.ready_revision+=1
         try:await self.safety.request('recording_ready',dict(ready=False,revision=self.ready_revision,fault_id=self.safety.snapshot.get('fault_id')))

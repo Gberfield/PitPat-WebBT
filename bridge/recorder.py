@@ -145,11 +145,15 @@ class RecordingWorker:
         self.task = None
         self.fault = None
         self.closed = False
+        self.pending_interrupts = 0
 
     def fail(self, error):
         if self.fault is None:
             self.fault = str(error)
             self.on_fault('Walk recording failed; motion blocked. ' + self.fault)
+
+    def requires_review(self, row=None, kind=None):
+        return bool(kind in ('interrupt', 'safety_evidence') or self.pending_interrupts or row and row['status'] == 'interrupted')
 
     def offer(self, kind, payload=None, future=None):
         if self.fault or self.closed: return False
@@ -157,6 +161,7 @@ class RecordingWorker:
         except asyncio.QueueFull:
             self.fail('Recording queue overflow')
             return False
+        if kind in ('interrupt', 'safety_evidence'): self.pending_interrupts += 1
         if self.task is None or self.task.done(): self.task = asyncio.create_task(self.run())
         return True
 
@@ -168,6 +173,8 @@ class RecordingWorker:
     async def run(self):
         while not self.queue.empty():
             kind, payload, future = self.queue.get_nowait()
+            # The controller stays latched while this operation runs; only its update can clear it.
+            if kind in ('interrupt', 'safety_evidence'): self.pending_interrupts -= 1
             try:
                 if self.fault: raise OSError('Walk recording unavailable')
                 if kind == 'before_start': self.recorder.before_start(payload)

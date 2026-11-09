@@ -77,8 +77,7 @@ class Controller:
         return None
 
     def recorded(self, row):
-        if row and row['status'] == 'interrupted': self.tracking_review = True
-        elif not self.recording.queue.qsize(): self.tracking_review = False
+        self.tracking_review = self.recording.requires_review(row)
         self.emit('walk', session=self.session_summary())
 
     def prepare_start(self):
@@ -95,7 +94,7 @@ class Controller:
 
     def record(self, kind, payload=None):
         if self.recording:
-            if kind == 'interrupt': self.tracking_review = True
+            self.tracking_review = self.tracking_review or self.recording.requires_review(kind=kind)
             return self.recording.offer(kind, payload)
         return True
 
