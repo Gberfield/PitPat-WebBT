@@ -79,10 +79,12 @@ None of this is required. Each item waits on the owner.
    needs recovery. This was left unchanged on purpose: changing it means changing
    the recovery rules, which needs the owner's decision.
 5. **Open state-machine issues.** The other issues listed in #49 are recorded
-   refactors and documentation, not known bugs. The cheapest remaining is #36
-   (write down the safety fault-recovery path). #38 was fixed on November 9, 2026:
-   `HealthMonitor.answered` records an accepted answer since attach, and
-   `is_healthy()` also checks expiry; behaviour is unchanged.
+   refactors and documentation, not known bugs. Two were done on November 9,
+   2026: #38 (`HealthMonitor.answered` records an accepted answer since attach,
+   and `is_healthy()` also checks expiry; behaviour is unchanged) and #36 (the
+   safety states and fault-recovery path are written down in
+   [safety states](safety-states.md), which also lists two narrow review
+   concerns not yet filed as issues).
    #35 asks whether a stopped report that arrives before the treadmill has
    processed Stop can count as confirmation; answering it needs a treadmill test.
 
