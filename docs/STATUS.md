@@ -83,8 +83,8 @@ None of this is required. Each item waits on the owner.
    2026: #38 (`HealthMonitor.answered` records an accepted answer since attach,
    and `is_healthy()` also checks expiry; behaviour is unchanged) and #36 (the
    safety states and fault-recovery path are written down in
-   [safety states](safety-states.md), which also lists two narrow review
-   concerns not yet filed as issues).
+   [safety states](safety-states.md); its two narrow review concerns are filed
+   as #61 and #62).
    #35 asks whether a stopped report that arrives before the treadmill has
    processed Stop can count as confirmation; answering it needs a treadmill test.
 
