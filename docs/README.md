@@ -10,6 +10,7 @@ of it.
 - [README](../README.md): setup, browsers, Omarchy and macOS, safety limits.
 - [macOS operations](macos-operations.md): running, updating, reinstalling,
   troubleshooting and testing on a Mac.
+- [Safety states](safety-states.md): authorization, motion gates and fault recovery.
 
 ## Acceptance results
 
