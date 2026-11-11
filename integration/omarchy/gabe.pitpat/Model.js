@@ -13,7 +13,7 @@ function view(snapshot,isOwner) {
     var settled=known&&!s.fault_id&&!s.recovery&&!s.storage_fault&&!s.stopping&&s.session?.status!=='interrupted';
     var healthy=settled&&!s.blocked;
     var state=s.stopping?'Stopping':s.connecting?'Connecting':!s.available?'Application unavailable':s.safety_available===false?'Safety unavailable':!s.connected?'Disconnected':
-        !known||s.recovery?'Motion unknown':['Starting','Walking','Paused','Stopped'][m.state]||'Motion unknown';
+        !known||s.recovery?'Motion unknown':['Starting','Walking','Paused',m.speed_raw===0?'Stopped':'Stopping'][m.state]||'Motion unknown';
     return {state:state,label:(s.simulator?'SIMULATOR · ':'')+state,
         owner:isOwner?'Tray controls motion':s.owner_kind?s.owner_kind+' controls motion · observing':'No motion controller',
         canStartPause:!!(isOwner&&healthy&&m.state!==0),canAdjust:!!(isOwner&&healthy&&m.state!==0),

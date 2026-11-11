@@ -2,6 +2,16 @@ const {test}=require('node:test');const assert=require('node:assert/strict');
 const Model=require('../integration/omarchy/gabe.pitpat/Model.js');
 const stopped={available:true,connected:true,blocked:false,stale:false,recovery:false,target_speed:1000,owner_present:true,owner_kind:'tray',
     metrics:{speed_raw:0,state:3,unit_mode:0,distance:1609,steps:1000,calories:30,duration:600000}};
+test('stopped state needs exactly zero speed for the Stopped label',()=>{
+    for(const speed of [0,1,1000,undefined,null,'0']) {
+        const s={...stopped,metrics:{...stopped.metrics,speed_raw:speed}};
+        for(const owner of [false,true]) {
+            const v=Model.view(s,owner);
+            assert.equal(v.state,speed===0?'Stopped':'Stopping');
+            assert.equal(v.label,v.state);
+        }
+    }
+});
 test('native model gates motion by owner and fresh state but permits global Stop',()=>{
     for(const state of [0,1,2,3]) {
         const s={...stopped,metrics:{...stopped.metrics,state,speed_raw:state===1?2000:0}};

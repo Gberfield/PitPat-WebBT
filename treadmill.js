@@ -417,7 +417,7 @@ function updateRunningState(state) {
             case 3: // Stopped
                 enableControls(true);
                 startBtn.textContent = "Start";
-                setStatus('Stopped');
+                setStatus(treadmillData._raw?.current_speed === 0 ? 'Stopped' : 'Stopping');
                 break;
             default:
                 enableControls(false);
@@ -702,7 +702,7 @@ function handleNotification(event) {
     }
     const {current_speed, distance, calories, steps, duration, flags, running_state, speed_unit, distance_unit} = raw;
     const unit_mode = speed_unit === 'mph' ? 1 : 0;
-    const statusArr = ["Starting", "Running", "Paused", "Stopped"];
+    const statusArr = ["Starting", "Running", "Paused", current_speed === 0 ? "Stopped" : "Stopping"];
     const mph = speedInMph(current_speed / 1000, speed_unit);
     treadmillData = {
         speed: mph.toFixed(2) + " mph",

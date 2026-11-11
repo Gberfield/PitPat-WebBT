@@ -143,7 +143,7 @@ enum Model {
         let settled = known && !s["fault_id"].truthy && !s["recovery"].truthy && !s["storage_fault"].truthy
             && !s["stopping"].truthy && s["session"]?["status"] != .string("interrupted")
         let healthy = settled && !s["blocked"].truthy
-        let states = ["Starting", "Walking", "Paused", "Stopped"]
+        let states = ["Starting", "Walking", "Paused", m["speed_raw"].strictlyEquals(0) ? "Stopped" : "Stopping"]
         var named: String? = nil
         switch m["state"] {
         case .number(let n)? where n == n.rounded() && n >= 0 && n < 4: named = states[Int(n)]

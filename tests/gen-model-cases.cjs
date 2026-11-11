@@ -11,6 +11,7 @@ const snapshots={
   'simulator-disconnected':{available:true,connected:false,simulator:true},
   'connecting':{available:true,connected:false,connecting:true},
   'stopped-owner':base,
+  'stopped-state-moving':{...base,metrics:{...metrics,speed_raw:1000}},
   'stopped-observer-browser':{...base,owner_kind:'browser'},
   'stopped-no-owner':{...base,owner_present:false,owner_kind:null,blocked:true,authorization_state:'unarmed'},
   'walking-owner':walking,

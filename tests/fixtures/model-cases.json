@@ -319,6 +319,84 @@
    }
   },
   {
+   "name": "stopped-state-moving",
+   "isOwner": false,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": false,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": true,
+    "owner_kind": "tray",
+    "metrics": {
+     "speed_raw": 1000,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    }
+   },
+   "view": {
+    "state": "Stopping",
+    "label": "Stopping",
+    "owner": "tray controls motion · observing",
+    "canStartPause": false,
+    "canAdjust": false,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.62 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
+   "name": "stopped-state-moving",
+   "isOwner": true,
+   "snapshot": {
+    "available": true,
+    "connected": true,
+    "blocked": false,
+    "stale": false,
+    "recovery": false,
+    "target_speed": 1000,
+    "owner_present": true,
+    "owner_kind": "tray",
+    "metrics": {
+     "speed_raw": 1000,
+     "state": 3,
+     "unit_mode": 0,
+     "distance": 1609,
+     "steps": 1000,
+     "calories": 30,
+     "duration": 600000
+    }
+   },
+   "view": {
+    "state": "Stopping",
+    "label": "Stopping",
+    "owner": "Tray controls motion",
+    "canStartPause": true,
+    "canAdjust": true,
+    "canStop": true,
+    "canTakeControl": false,
+    "startText": "Start",
+    "speed": "0.62 mph",
+    "distance": "1.000 mi",
+    "calories": "30 Cal",
+    "steps": "1000",
+    "duration": "10m 0s",
+    "target": "0.62"
+   }
+  },
+  {
    "name": "stopped-observer-browser",
    "isOwner": false,
    "snapshot": {
