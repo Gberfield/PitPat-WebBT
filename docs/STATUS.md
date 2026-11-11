@@ -1,6 +1,6 @@
 # Project status
 
-Last updated: November 9, 2026 (EST). Update this file whenever the state below
+Last updated: November 11, 2026 (EST). Update this file whenever the state below
 changes. Read it first when picking the project up again.
 
 ## Where things stand
@@ -87,6 +87,17 @@ None of this is required. Each item waits on the owner.
    as #61 and #62).
    #35 asks whether a stopped report that arrives before the treadmill has
    processed Stop can count as confirmation; answering it needs a treadmill test.
+
+6. **Stop incident, November 11, 2026, 4:55 PM.** During a 1.0 mph walk the owner
+   ran "Stop PitPat" from Spotlight with the Siri T11 build installed (branch codex/t11-stop-intent). The walk record
+   ended at 4:55:07 PM on a report of state 3 with zero speed, which is what
+   confirms a Stop, but the owner says the belt kept moving until he pressed Stop
+   in the menu bar. Later reports showed state 3 with speed 1.0 and frozen
+   counters, which the labels showed as "Stopped". Safety restarted soon after,
+   so whether the intent's Stop caused the confirmation can't be traced. This is
+   the question in #35 and also affects the hotkey and menu bar Stop. Proposed:
+   T14 (label) and T15 (Stop log); a supervised treadmill test needs the owner.
+   Don't rely on voice or Spotlight Stop until it is understood.
 
 ## Owner decisions
 

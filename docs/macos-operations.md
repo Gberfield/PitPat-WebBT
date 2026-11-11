@@ -13,7 +13,7 @@ For what was tested and when, read the [acceptance checklist](macos-acceptance.m
 | Services | `~/Library/LaunchAgents/com.gberfield.pitpat.{safety,bridge}.plist` | Start when the menu bar app opens, stop when it quits, never at login |
 | Command | `~/.local/bin/pitpat` | |
 | Install manifest | `~/.local/state/pitpat/install-macos.json` | Needed for rollback |
-| Logs | `~/Library/Logs/PitPat/` | `safety.log` is normally empty |
+| Logs | `~/Library/Logs/PitPat/` | `safety.log` captures Stop and fault events |
 
 The services and `pitpat` run the code in this repository folder through its
 `.venv`. So:
@@ -72,6 +72,10 @@ to be moved aside. Each install re-signs the apps ad hoc, so macOS may ask for
 Bluetooth permission again.
 
 ## Troubleshooting
+
+Read Stop requests/results, fault/recovery events and reports through 15 seconds after Stop with `tail -n 200 ~/Library/Logs/PitPat/safety.log` (JSON, UTC timestamps).
+For hotkey outcomes, run `log show --last 1h --predicate 'subsystem == "com.gberfield.pitpat.menubar" AND category == "SafetyStop"'`.
+Safety logging is best effort: each line is flushed by a background writer; a blocked/full or failed sink can lose lines without delaying Stop.
 
 | Symptom | Cause and fix |
 | --- | --- |

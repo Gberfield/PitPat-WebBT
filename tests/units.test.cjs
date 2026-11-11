@@ -99,6 +99,18 @@ function dashboard(history = [], failBackup = false, { currentSession = null, ra
     };
 }
 
+test('browser stopped labels require state 3 and zero speed', () => {
+    const app=dashboard(); app.bluetooth();
+    for(const [state,speed,label] of [[3,1000,'Stopping'],[3,1,'Stopping'],[3,0,'Stopped'],
+        [0,0,'Starting'],[1,0,'Running'],[2,0,'Paused']]) {
+        app.notify(true,speed,1000,{state});
+        assert.equal(app.run('treadmillData.status'),label);
+        assert.equal(app.node('statusChip-text').textContent,label);
+        app.run(`updateRunningState(${state})`);
+        assert.equal(app.node('statusChip-text').textContent,label);
+    }
+});
+
 test('bridge telemetry preserves units and never sends a browser heartbeat', async () => {
     const app = dashboard(); const bridge = app.bridge();
     bridge.emit({event:'state',data:{connected:true,blocked:false}});

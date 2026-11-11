@@ -67,7 +67,7 @@ class SafetyServer:
             try:
                 op=frame['op']
                 if role=='helper':
-                    if op=='stop':result=await core.stop('Emergency helper')
+                    if op=='stop':result=await core.stop('Emergency helper',source='helper')
                     elif op=='evidence':result=core.evidence(**frame['args'])
                     else:result=core.snapshot()
                 else:result=await core.handle_application(op,frame['authority'],frame['args'])
