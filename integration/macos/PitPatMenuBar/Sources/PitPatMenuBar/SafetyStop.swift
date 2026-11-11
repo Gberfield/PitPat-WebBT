@@ -3,14 +3,14 @@
 import Foundation
 
 enum SafetyStop {
-    enum Outcome: Equatable { case stopped, notConnected, failed(String) }
+    enum Outcome: Equatable { case stopped, failed(String) }
 
     static let guidance = "Stop unconfirmed. Use the physical stop control."
 
-    // Calls done on the main queue; only the intent opts out on explicit safety disconnection.
-    static func run(runtime: String, skipIfDisconnected: Bool = false, done: @escaping (Outcome) -> Void) {
+    // Calls done on the main queue with confirmed Stop or the failure text.
+    static func run(runtime: String, done: @escaping (Outcome) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
-            let outcome = stop(path: runtime + "/safety.sock", skipIfDisconnected: skipIfDisconnected)
+            let outcome = stop(path: runtime + "/safety.sock")
             DispatchQueue.main.async {
                 if case .failed(let text) = outcome { done(.failed(text.isEmpty ? guidance : guidance + " " + text)) }
                 else { done(outcome) }
@@ -18,7 +18,7 @@ enum SafetyStop {
         }
     }
 
-    static func stop(path: String, skipIfDisconnected: Bool = false) -> Outcome {
+    static func stop(path: String) -> Outcome {
         let fd = connectUnix(path)
         guard fd >= 0 else { return .failed(String(cString: strerror(errno))) }
         defer { close(fd) }
@@ -26,10 +26,6 @@ enum SafetyStop {
         guard writeAll(fd, "{\"v\":1,\"op\":\"hello\",\"kind\":\"helper\"}\n") else { return .failed("Safety unavailable") }
         guard let hello = readLine(fd, &buffer, until: Date().addingTimeInterval(3)) else { return .failed("Safety authorization timed out") }
         guard let authorization = JSON.parse(hello), authorization["event"] == .string("authorized") else { return .failed("Safety authorization failed") }
-        if skipIfDisconnected, case .object(let snapshot)? = authorization["snapshot"],
-           snapshot["link_state"] == .string("disconnected"), snapshot["connected"] == .bool(false) {
-            return .notConnected
-        }
         guard writeAll(fd, "{\"v\":1,\"id\":\"stop\",\"op\":\"stop\",\"authority\":null,\"args\":{}}\n") else { return .failed("Safety unavailable") }
         let deadline = Date().addingTimeInterval(8)
         while true {

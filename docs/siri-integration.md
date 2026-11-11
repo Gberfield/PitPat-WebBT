@@ -84,6 +84,13 @@ safety confirmed it.
   hotkey does. This narrows D3: with PitPat open but nothing connected, the
   voice Stop no longer latches a fault, while the hotkey and `pitpat stop`
   still always send Stop.
+  **Final, November 11, 2026, after T11's second adversarial review:** the
+  safety-snapshot skip was dropped too. `SafetyCore.disconnect_confirmed()` can
+  overwrite `link_state` with "disconnected" while a newer `connect_device()` is
+  in progress, so safety can't yet say "nothing is connected" reliably. The
+  voice Stop now always sends exactly what the hotkey sends (the original D3). A
+  voice Stop with nothing connected, including after Siri opens a closed
+  PitPat, latches a fault, and the next Connect needs recovery.
 - **D3. Stop with nothing connected.** `pitpat stop` and the Stop hotkey latch a
   fault when no treadmill is connected (STATUS optional item 4, left unchanged
   on purpose). Recommendation: the Siri Stop sends exactly what the hotkey

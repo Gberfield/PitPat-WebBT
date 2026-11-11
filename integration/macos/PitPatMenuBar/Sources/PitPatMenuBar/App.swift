@@ -78,7 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let shared = AppDelegate()
     @MainActor static var intentService: Service { shared.service }
     @MainActor static func intentStop() async -> String {
-        stopIntentDialog(await shared.runSafetyStop(skipIfDisconnected: true))
+        stopIntentDialog(await shared.runSafetyStop())
     }
     let service = Service()
     private var item: NSStatusItem!
@@ -178,9 +178,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     @discardableResult
-    private func runSafetyStop(skipIfDisconnected: Bool = false) async -> SafetyStop.Outcome {
+    private func runSafetyStop() async -> SafetyStop.Outcome {
         await withCheckedContinuation { continuation in
-            SafetyStop.run(runtime: service.runtime, skipIfDisconnected: skipIfDisconnected) { outcome in
+            SafetyStop.run(runtime: service.runtime) { outcome in
                 Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop outcome=\(String(describing: outcome), privacy: .public)")
                 if case .failed(let failure) = outcome {
                     self.service.warning = failure

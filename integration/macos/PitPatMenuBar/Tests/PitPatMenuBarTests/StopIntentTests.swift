@@ -51,48 +51,16 @@ private final class FakeSafetySocket: Sendable {
 
 final class StopIntentTests: XCTestCase {
     @MainActor
-    private func runStop(runtime: String, skipIfDisconnected: Bool? = true) async -> SafetyStop.Outcome {
+    private func runStop(runtime: String) async -> SafetyStop.Outcome {
         await withCheckedContinuation { continuation in
-            if let skipIfDisconnected {
-                SafetyStop.run(runtime: runtime, skipIfDisconnected: skipIfDisconnected) { continuation.resume(returning: $0) }
-            } else {
-                SafetyStop.run(runtime: runtime) { continuation.resume(returning: $0) }
-            }
+            SafetyStop.run(runtime: runtime) { continuation.resume(returning: $0) }
         }
     }
 
     @MainActor
-    func testOnlyExplicitSafetyDisconnectionSkipsIntentStop() async throws {
-        let snapshots: [(String?, Bool)] = [
-            (#"{"link_state":"disconnected","connected":false}"#, false),
-            (#"{"link_state":"connecting","connected":false}"#, true),
-            (#"{"link_state":"connected","connected":true}"#, true),
-            (#"{"link_state":"lost","connected":false}"#, true),
-            (#"{"connected":false}"#, true),
-            (#"{"link_state":"disconnected","connected":true}"#, true),
-            (#"{"link_state":"disconnected","connected":0}"#, true),
-            (#"{"link_state":"disconnected","connected":"false"}"#, true),
-            (#"{"link_state":"disconnected","connected":null}"#, true),
-            (#"{"link_state":"disconnected"}"#, true),
-            (#"{"link_state":false,"connected":false}"#, true),
-            (#"{"link_state":"unknown","connected":false}"#, true),
-            (nil, true), ("null", true), ("[]", true), ("false", true), (#""disconnected""#, true)
-        ]
-        for (snapshot, sendsStop) in snapshots {
-            try await checkHello(snapshot: snapshot, skipIfDisconnected: true, sendsStop: sendsStop)
-        }
-    }
-
-    @MainActor
-    func testDefaultHotkeyModeSendsStopEvenWhenSafetyReportsDisconnected() async throws {
-        try await checkHello(snapshot: #"{"link_state":"disconnected","connected":false}"#,
-                             skipIfDisconnected: nil, sendsStop: true)
-    }
-
-    @MainActor
-    private func checkHello(snapshot: String?, skipIfDisconnected: Bool?, sendsStop: Bool) async throws {
+    func testIntentStopSendsStopEvenWhenSafetyReportsDisconnected() async throws {
         let fake = try FakeSafetySocket()
-        let served = expectation(description: "hello snapshot: " + (snapshot ?? "missing"))
+        let served = expectation(description: "disconnected hello still requires Stop")
         DispatchQueue.global().async {
             defer { served.fulfill() }
             let client = fake.acceptClient()
@@ -100,21 +68,13 @@ final class StopIntentTests: XCTestCase {
             guard client >= 0 else { return }
             defer { close(client) }
             XCTAssertEqual(fake.line(client), #"{"v":1,"op":"hello","kind":"helper"}"#)
-            let field = snapshot.map { ",\"snapshot\":" + $0 } ?? ""
-            XCTAssertTrue(writeAll(client, "{\"v\":1,\"event\":\"authorized\"" + field + "}\n"))
-            if sendsStop {
-                XCTAssertEqual(fake.line(client), #"{"v":1,"id":"stop","op":"stop","authority":null,"args":{}}"#)
-                XCTAssertTrue(writeAll(client, "{\"id\":\"stop\",\"ok\":true,\"result\":{\"outcome\":\"stopped_confirmed\"}}\n"))
-            } else {
-                var p = pollfd(fd: client, events: Int16(POLLIN), revents: 0)
-                XCTAssertGreaterThan(poll(&p, 1, 3000), 0)
-                var byte: UInt8 = 0
-                XCTAssertEqual(read(client, &byte, 1), 0, "must close without sending Stop")
-            }
+            XCTAssertTrue(writeAll(client, "{\"v\":1,\"event\":\"authorized\",\"snapshot\":{\"link_state\":\"disconnected\",\"connected\":false}}\n"))
+            XCTAssertEqual(fake.line(client), #"{"v":1,"id":"stop","op":"stop","authority":null,"args":{}}"#)
+            XCTAssertTrue(writeAll(client, "{\"id\":\"stop\",\"ok\":true,\"result\":{\"outcome\":\"stopped_confirmed\"}}\n"))
         }
-        let outcome = await runStop(runtime: fake.runtime, skipIfDisconnected: skipIfDisconnected)
-        XCTAssertEqual(outcome, sendsStop ? .stopped : .notConnected)
-        XCTAssertEqual(stopIntentDialog(outcome), sendsStop ? "Stopped." : "No treadmill is connected, so nothing was stopped.")
+        let outcome = await runStop(runtime: fake.runtime)
+        XCTAssertEqual(outcome, .stopped)
+        XCTAssertEqual(stopIntentDialog(outcome), "Stopped.")
         await fulfillment(of: [served], timeout: 5)
     }
 

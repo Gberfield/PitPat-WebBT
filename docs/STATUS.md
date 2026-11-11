@@ -96,7 +96,15 @@ None of this is required. Each item waits on the owner.
    #35 asks whether a stopped report that arrives before the treadmill has
    processed Stop can count as confirmation; answering it needs a treadmill test.
 
-6. **Stop incident, November 11, 2026, 4:55 PM.** During a 1.0 mph walk the owner
+6. **Safety `link_state` race.** Found November 11, 2026 by T11's adversarial
+   review. `SafetyCore.disconnect_confirmed()` sets `link_state` to
+   "disconnected" after awaiting Bluetooth teardown, and a `connect_device()`
+   that starts during that wait is then reported as "disconnected" until it
+   completes; safety's snapshot also omits `connecting`. Motion isn't affected
+   (a new connection always runs its own Stop first), but every reader of the
+   snapshot can see the wrong link state. Not yet filed as a GitHub issue.
+
+7. **Stop incident, November 11, 2026, 4:55 PM.** During a 1.0 mph walk the owner
    ran "Stop PitPat" from Spotlight with the Siri T11 build installed (branch codex/t11-stop-intent). The walk record
    ended at 4:55:07 PM on a report of state 3 with zero speed, which is what
    confirms a Stop, but the owner says the belt kept moving until he pressed Stop
@@ -117,9 +125,9 @@ Settled; don't reopen them without the owner. Newest first.
   Siri's Stop sends exactly what the Stop
   hotkey sends. Building the menu bar app may require the full Xcode.
   Revised the same day after T9: Siri opening PitPat counts as opening it and
-  may start the services. After T11's adversarial review the voice Stop asks
-  safety instead: it skips Stop only when safety reports no treadmill link
-  (`link_state` "disconnected"); the hotkey and `pitpat stop` always send it.
+  may start the services. Siri's Stop always sends exactly what the Stop hotkey
+  sends, so a voice Stop with nothing connected latches a fault (two skip rules
+  were tried in T11 and dropped after adversarial reviews).
 
 - **November 9, 2026: record review is its own safety gate.** An interrupted walk
   record that needs review blocks motion in the safety process through the non-fault

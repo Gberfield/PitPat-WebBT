@@ -60,7 +60,6 @@ struct PitPatStatusIntent: AppIntent {
 func stopIntentDialog(_ outcome: SafetyStop.Outcome) -> String {
     switch outcome {
     case .stopped: return "Stopped."
-    case .notConnected: return "No treadmill is connected, so nothing was stopped."
     case .failed(let text): return text
     }
 }
