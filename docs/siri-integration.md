@@ -76,6 +76,14 @@ safety confirmed it.
   check is best effort; if it misjudges, the worst case is the fault described
   in D3. A separate intents process (which would guarantee "never starts") was
   considered and not chosen.
+  **Revised again November 11, 2026, after T11's adversarial review:** the
+  launch-probe guard could refuse a needed Stop when the menu bar missed a
+  browser Connect. The owner chose to ask safety itself: the Siri Stop skips
+  sending only when safety's own hello snapshot reports `link_state`
+  "disconnected" and `connected` false, and otherwise sends Stop exactly as the
+  hotkey does. This narrows D3: with PitPat open but nothing connected, the
+  voice Stop no longer latches a fault, while the hotkey and `pitpat stop`
+  still always send Stop.
 - **D3. Stop with nothing connected.** `pitpat stop` and the Stop hotkey latch a
   fault when no treadmill is connected (STATUS optional item 4, left unchanged
   on purpose). Recommendation: the Siri Stop sends exactly what the hotkey

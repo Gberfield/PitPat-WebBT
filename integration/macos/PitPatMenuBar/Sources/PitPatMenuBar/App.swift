@@ -78,12 +78,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let shared = AppDelegate()
     @MainActor static var intentService: Service { shared.service }
     @MainActor static func intentStop() async -> String {
-        await stopIntentDialog(safetyRunningAtLaunch: shared.safetyRunningAtLaunch,
-                               hasSeenTreadmillConnection: shared.service.hasSeenTreadmillConnection) {
-            await shared.runSafetyStop()
-        }
+        stopIntentDialog(await shared.runSafetyStop(skipIfDisconnected: true))
     }
-    private(set) var safetyRunningAtLaunch = false
     let service = Service()
     private var item: NSStatusItem!
     private let popover = NSPopover()
@@ -110,7 +106,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         host.sizingOptions = .preferredContentSize
         popover.contentViewController = host
         observer = service.objectWillChange.sink { [weak self] _ in DispatchQueue.main.async { self?.updateButton() } }
-        safetyRunningAtLaunch = safetyIsRunning(path: service.runtime + "/safety.sock")
         if ServiceStart.shouldStart() {
             ServiceStart.run { [weak self] failure in if let failure { self?.service.errorText = failure } }
         }
@@ -183,16 +178,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     @MainActor
     @discardableResult
-    private func runSafetyStop() async -> String? {
+    private func runSafetyStop(skipIfDisconnected: Bool = false) async -> SafetyStop.Outcome {
         await withCheckedContinuation { continuation in
-            SafetyStop.run(runtime: service.runtime) { failure in
-                Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop outcome=\(failure == nil ? "stopped_confirmed" : "unconfirmed", privacy: .public) detail=\(failure ?? "Treadmill reported stopped with zero speed.", privacy: .public)")
-                if let failure {
+            SafetyStop.run(runtime: service.runtime, skipIfDisconnected: skipIfDisconnected) { outcome in
+                Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop outcome=\(String(describing: outcome), privacy: .public)")
+                if case .failed(let failure) = outcome {
                     self.service.warning = failure
                     self.notify(failure)
                     self.showControls()
                 }
-                continuation.resume(returning: failure)
+                continuation.resume(returning: outcome)
             }
         }
     }

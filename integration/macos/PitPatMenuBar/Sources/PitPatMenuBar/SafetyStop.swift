@@ -3,32 +3,41 @@
 import Foundation
 
 enum SafetyStop {
+    enum Outcome: Equatable { case stopped, notConnected, failed(String) }
+
     static let guidance = "Stop unconfirmed. Use the physical stop control."
 
-    // Calls done on the main queue with nil once Stop is confirmed, else the failure text.
-    static func run(runtime: String, done: @escaping (String?) -> Void) {
+    // Calls done on the main queue; only the intent opts out on explicit safety disconnection.
+    static func run(runtime: String, skipIfDisconnected: Bool = false, done: @escaping (Outcome) -> Void) {
         DispatchQueue.global(qos: .userInitiated).async {
-            let failure = stop(path: runtime + "/safety.sock")
-            DispatchQueue.main.async { done(failure.map { $0.isEmpty ? guidance : guidance + " " + $0 }) }
+            let outcome = stop(path: runtime + "/safety.sock", skipIfDisconnected: skipIfDisconnected)
+            DispatchQueue.main.async {
+                if case .failed(let text) = outcome { done(.failed(text.isEmpty ? guidance : guidance + " " + text)) }
+                else { done(outcome) }
+            }
         }
     }
 
-    static func stop(path: String) -> String? {
+    static func stop(path: String, skipIfDisconnected: Bool = false) -> Outcome {
         let fd = connectUnix(path)
-        guard fd >= 0 else { return String(cString: strerror(errno)) }
+        guard fd >= 0 else { return .failed(String(cString: strerror(errno))) }
         defer { close(fd) }
         var buffer = Data()
-        guard writeAll(fd, "{\"v\":1,\"op\":\"hello\",\"kind\":\"helper\"}\n") else { return "Safety unavailable" }
-        guard let hello = readLine(fd, &buffer, until: Date().addingTimeInterval(3)) else { return "Safety authorization timed out" }
-        guard JSON.parse(hello)?["event"] == .string("authorized") else { return "Safety authorization failed" }
-        guard writeAll(fd, "{\"v\":1,\"id\":\"stop\",\"op\":\"stop\",\"authority\":null,\"args\":{}}\n") else { return "Safety unavailable" }
+        guard writeAll(fd, "{\"v\":1,\"op\":\"hello\",\"kind\":\"helper\"}\n") else { return .failed("Safety unavailable") }
+        guard let hello = readLine(fd, &buffer, until: Date().addingTimeInterval(3)) else { return .failed("Safety authorization timed out") }
+        guard let authorization = JSON.parse(hello), authorization["event"] == .string("authorized") else { return .failed("Safety authorization failed") }
+        if skipIfDisconnected, case .object(let snapshot)? = authorization["snapshot"],
+           snapshot["link_state"] == .string("disconnected"), snapshot["connected"] == .bool(false) {
+            return .notConnected
+        }
+        guard writeAll(fd, "{\"v\":1,\"id\":\"stop\",\"op\":\"stop\",\"authority\":null,\"args\":{}}\n") else { return .failed("Safety unavailable") }
         let deadline = Date().addingTimeInterval(8)
         while true {
             guard let line = readLine(fd, &buffer, until: deadline) else {
-                return Date() < deadline ? "Safety unavailable; Stop unconfirmed. Use physical stop." : "Stop timed out"
+                return .failed(Date() < deadline ? "Safety unavailable; Stop unconfirmed. Use physical stop." : "Stop timed out")
             }
             guard let message = JSON.parse(line), message["id"] == .string("stop") else { continue }
-            return message["ok"] == .bool(true) && message["result"]?["outcome"] == .string("stopped_confirmed") ? nil : ""
+            return message["ok"] == .bool(true) && message["result"]?["outcome"] == .string("stopped_confirmed") ? .stopped : .failed("")
         }
     }
 

@@ -57,14 +57,12 @@ struct PitPatStatusIntent: AppIntent {
     }
 }
 
-// Refuse only the closed-app case; current snapshot state never gates an allowed Stop.
-@MainActor
-func stopIntentDialog(safetyRunningAtLaunch: Bool, hasSeenTreadmillConnection: Bool,
-                      stop: () async -> String?) async -> String {
-    if !safetyRunningAtLaunch && !hasSeenTreadmillConnection {
-        return "PitPat wasn't open, so no treadmill is connected. Nothing was stopped."
+func stopIntentDialog(_ outcome: SafetyStop.Outcome) -> String {
+    switch outcome {
+    case .stopped: return "Stopped."
+    case .notConnected: return "No treadmill is connected, so nothing was stopped."
+    case .failed(let text): return text
     }
-    return await stop() ?? "Stopped."
 }
 
 struct PitPatStopIntent: AppIntent {

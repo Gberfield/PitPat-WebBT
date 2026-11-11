@@ -40,10 +40,10 @@ final class SimulatorTests: XCTestCase {
         try wait("walking again") { service.model.state == "Walking" }
 
         // The Stop hotkey path: straight to safety.sock, independent of control.sock.
-        var failure: String?? = .none
-        SafetyStop.run(runtime: runtime) { failure = .some($0) }
-        try wait("safety stop") { failure != nil }
-        XCTAssertEqual(failure, .some(nil))
+        var outcome: SafetyStop.Outcome?
+        SafetyStop.run(runtime: runtime) { outcome = $0 }
+        try wait("safety stop") { outcome != nil }
+        XCTAssertEqual(outcome, .stopped)
         try wait("stopped") { service.model.state == "Stopped" }
 
         if let pid = env["PITPAT_SIMULATOR_BRIDGE_PID"].flatMap(Int32.init) {

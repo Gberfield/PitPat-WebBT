@@ -44,5 +44,6 @@ Effort is low, medium, high or xhigh, fitted by Claude per task and adjustable b
 
 - 2026-11-11: the owner accepted the Siri recommendations D1–D4 in docs/siri-integration.md: Status and Stop first, then Pause, Start only with spoken confirmation, no speed changes; intents never start the services; Siri Stop matches the Stop hotkey exactly; the full Xcode may become a build requirement.
 - 2026-11-11 (after T9): D2 revised. No reliable intent-launch signal exists, so Siri opening PitPat counts as opening it and may start the services; the Stop intent (T11) refuses when safety wasn't running before launch. A separate intents process was considered and not chosen.
+- 2026-11-11 (after T11 adversarial review): the T11 guard is replaced. The Siri Stop asks safety: it skips Stop only when safety's hello snapshot says link_state "disconnected" and connected false, otherwise it sends Stop like the hotkey. The hotkey and `pitpat stop` are unchanged.
 - 2026-11-09: T1's adversarial review found that motion queued before an interrupt can still be written (#50, already on main). The owner chose to keep T1 as is, since it narrows the window, and to fix the write boundary separately as T4.
 

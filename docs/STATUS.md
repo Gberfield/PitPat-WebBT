@@ -117,8 +117,9 @@ Settled; don't reopen them without the owner. Newest first.
   Siri's Stop sends exactly what the Stop
   hotkey sends. Building the menu bar app may require the full Xcode.
   Revised the same day after T9: Siri opening PitPat counts as opening it and
-  may start the services; the voice Stop refuses if safety wasn't already
-  running when PitPat launched.
+  may start the services. After T11's adversarial review the voice Stop asks
+  safety instead: it skips Stop only when safety reports no treadmill link
+  (`link_state` "disconnected"); the hotkey and `pitpat stop` always send it.
 
 - **November 9, 2026: record review is its own safety gate.** An interrupted walk
   record that needs review blocks motion in the safety process through the non-fault
