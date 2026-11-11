@@ -5,9 +5,15 @@ changes. Read it first when picking the project up again.
 
 ## Where things stand
 
-Nothing is in progress and nothing is blocked. On November 11, 2026 a Siri
-integration plan was proposed ([plan](siri-integration.md), PLAN.md T9–T13) and
-the owner settled its decisions D1–D4. Nothing is built; T9 was delegated to Codex the same day. Macs and Linux share one codebase.
+On November 11, 2026 a Siri integration plan was proposed
+([plan](siri-integration.md), PLAN.md T9–T13) and the owner settled its decisions
+D1–D4. T9, on branch `codex/t9-siri-intents-spike`, adds a read-only status intent
+and builds the menu bar app with Xcode so the intent metadata is generated; see the
+[spike report](siri-intents-spike.md). All checks pass, and the build contains the
+intent and both phrases. It is not installed: Shortcuts/Siri registration is
+unverified, and no reliable way was found for the app to tell an intent launch
+from a normal open, so an intent run while PitPat is closed would still start the
+services (D2 is not met yet). Macs and Linux share one codebase.
 On November 4, 2026 the menu bar app began starting both services when it opens
 and stopping them when it quits, so `pitpat controls` is no longer needed. It is
 merged and installed on the owner's MacBook. Opening **PitPat Safety** by hand now

@@ -76,6 +76,7 @@ struct ControlsView: View {
 @main
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let shared = AppDelegate()
+    @MainActor static var intentService: Service { shared.service }
     let service = Service()
     private var item: NSStatusItem!
     private let popover = NSPopover()

@@ -1,0 +1,88 @@
+// !$*UTF8*$!
+{
+    archiveVersion = 1;
+    classes = {};
+    objectVersion = 77;
+    objects = {
+        100000000000000000000001 = {
+            isa = PBXProject;
+            attributes = { LastUpgradeCheck = 2720; };
+            buildConfigurationList = 100000000000000000000007;
+            compatibilityVersion = "Xcode 16.0";
+            developmentRegion = en;
+            knownRegions = (en, Base);
+            mainGroup = 100000000000000000000002;
+            productRefGroup = 100000000000000000000003;
+            projectDirPath = "";
+            projectRoot = "";
+            targets = (100000000000000000000005);
+        };
+        100000000000000000000002 = {
+            isa = PBXGroup;
+            children = (100000000000000000000004, 100000000000000000000003);
+            sourceTree = "<group>";
+        };
+        100000000000000000000003 = {
+            isa = PBXGroup;
+            children = (100000000000000000000006);
+            name = Products;
+            sourceTree = "<group>";
+        };
+        100000000000000000000004 = {
+            isa = PBXFileSystemSynchronizedRootGroup;
+            path = Sources/PitPatMenuBar;
+            sourceTree = "<group>";
+        };
+        100000000000000000000005 = {
+            isa = PBXNativeTarget;
+            buildConfigurationList = 100000000000000000000008;
+            buildPhases = (100000000000000000000009, 10000000000000000000000A, 10000000000000000000000B);
+            buildRules = ();
+            dependencies = ();
+            fileSystemSynchronizedGroups = (100000000000000000000004);
+            name = PitPatMenuBar;
+            productName = PitPat;
+            productReference = 100000000000000000000006;
+            productType = "com.apple.product-type.application";
+        };
+        100000000000000000000006 = {
+            isa = PBXFileReference;
+            explicitFileType = wrapper.application;
+            path = PitPat.app;
+            sourceTree = BUILT_PRODUCTS_DIR;
+        };
+        100000000000000000000007 = { isa = XCConfigurationList; buildConfigurations = (10000000000000000000000C); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        100000000000000000000008 = { isa = XCConfigurationList; buildConfigurations = (10000000000000000000000D); defaultConfigurationIsVisible = 0; defaultConfigurationName = Release; };
+        100000000000000000000009 = { isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        10000000000000000000000A = { isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        10000000000000000000000B = { isa = PBXResourcesBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0; };
+        10000000000000000000000C = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                ALWAYS_SEARCH_USER_PATHS = NO;
+                MACOSX_DEPLOYMENT_TARGET = 13.0;
+                SDKROOT = macosx;
+                SWIFT_VERSION = 5.0;
+            };
+            name = Release;
+        };
+        10000000000000000000000D = {
+            isa = XCBuildConfiguration;
+            buildSettings = {
+                CODE_SIGNING_ALLOWED = NO;
+                COMBINE_HIDPI_IMAGES = YES;
+                EXECUTABLE_NAME = PitPatMenuBar;
+                GENERATE_INFOPLIST_FILE = NO;
+                GENERATE_PKGINFO_FILE = NO;
+                PRODUCT_MODULE_NAME = PitPatMenuBar;
+                INFOPLIST_FILE = Info.plist;
+                PRODUCT_BUNDLE_IDENTIFIER = com.gberfield.pitpat.menubar;
+                PRODUCT_NAME = PitPat;
+                SWIFT_EMIT_LOC_STRINGS = YES;
+                SWIFT_OPTIMIZATION_LEVEL = "-O";
+            };
+            name = Release;
+        };
+    };
+    rootObject = 100000000000000000000001;
+}

@@ -22,7 +22,8 @@ of it.
 
 ## Proposed work
 
-- [Siri integration](siri-integration.md): plan and owner decisions, not built.
+- [Siri integration](siri-integration.md): plan and owner decisions.
+- [T9 App Intents spike](siri-intents-spike.md): build evidence, launch-detection limits and pending checks.
 
 ## How it was built
 

@@ -127,6 +127,51 @@ class MacInstallTests(unittest.TestCase):
         self.rollback(services=lambda:{'com.gberfield.pitpat.safety':'not'},force_while_loaded=True)
         self.assertFalse((self.home/'Applications').exists())
 
+    def test_metadata_tree_is_signed_manifested_and_rolled_back(self):
+        metadata=self.menubar/'Contents/Resources/Metadata.appintents'
+        (metadata/'nested').mkdir(parents=True)
+        payloads={'extract.actionsdata':b'{"actions":[]}', 'nested/version':b'1'}
+        for name,data in payloads.items():(metadata/name).write_bytes(data)
+        self.apply()
+        installed=self.home/installer.MENUBAR_APP/'Contents/Resources/Metadata.appintents'
+        for name,data in payloads.items():self.assertEqual((installed/name).read_bytes(),data)
+        manifest=json.loads(self.manifest.read_text());installer.validate(manifest,self.home)
+        for name in payloads:
+            item=next(i for i in manifest['operations'] if i['path']==str(installed/name))
+            self.assertEqual(item['after_sha256'],installer.digest((installed/name).read_bytes()))
+        self.assertEqual(self.rollback(),[])
+        self.assertEqual(snapshot(self.home),{**self.before,'Library/Logs/PitPat':None})
+
+    def test_metadata_upgrade_and_older_build_rollback(self):
+        metadata=self.menubar/'Contents/Resources/Metadata.appintents';metadata.mkdir(parents=True)
+        data=metadata/'extract.actionsdata';data.write_bytes(b'old')
+        self.apply();first=snapshot(self.home)
+        data.write_bytes(b'new');(metadata/'version.json').write_bytes(b'1')
+        self.manifest=self.root/'upgrade.json';self.apply();self.rollback()
+        self.assertEqual(snapshot(self.home),first)
+        data.unlink();(metadata/'version.json').unlink()
+        self.manifest=self.root/'older.json';self.apply()
+        self.assertFalse((self.home/installer.MENUBAR_APP/'Contents/Resources/Metadata.appintents/extract.actionsdata').exists())
+        self.rollback();self.assertEqual(snapshot(self.home),first)
+
+    def test_metadata_manifest_cannot_escape_subtree(self):
+        for relative in ('Contents/Resources/extra', 'Contents/Resources/Metadata.appintents-extra/data', 'Contents/Resources/Metadata.appintents/../extra'):
+            self.assertFalse(installer.metadata_file(Path(relative)))
+        self.apply();manifest=json.loads(self.manifest.read_text())
+        manifest['operations'][0]['path']=str(self.home/installer.MENUBAR_APP/'Contents/Resources/Metadata.appintents/../extra')
+        with self.assertRaises(ValueError):installer.validate(manifest,self.home)
+
+    def test_metadata_siblings_and_symlinks_refused(self):
+        metadata=self.menubar/'Contents/Resources/Metadata.appintents';metadata.mkdir(parents=True)
+        (metadata/'extract.actionsdata').write_bytes(b'{}')
+        stray=metadata.parent/'extra';stray.write_bytes(b'x')
+        with self.assertRaisesRegex(ValueError,'Unexpected file in menu bar build'):self.plan()
+        stray.unlink();(metadata/'link').symlink_to(self.launcher)
+        with self.assertRaisesRegex(ValueError,'Symlink'):self.plan()
+        (metadata/'link').unlink()
+        stray=self.home/installer.MENUBAR_APP/'Contents/Resources/extra';stray.parent.mkdir(parents=True);stray.write_bytes(b'x')
+        with self.assertRaises(ValueError):self.plan()
+
     def test_unbuilt_menu_bar_app_refuses(self):
         with self.assertRaises(ValueError):installer.plan(self.home,REPO,self.root/'missing.app',self.launcher)
         with self.assertRaises(ValueError):installer.plan(self.home,REPO,self.menubar,self.root/'missing')

@@ -31,18 +31,24 @@ MENUBAR_APP='Applications/PitPat.app'
 BUNDLES={SAFETY_APP:('Contents/Info.plist','Contents/MacOS/pitpat-safety','Contents/Resources/pitpat-safety'),
          MENUBAR_APP:('Contents/Info.plist','Contents/MacOS/PitPatMenuBar')}
 SIGNATURE='Contents/_CodeSignature'
+METADATA='Contents/Resources/Metadata.appintents'
 MENUBAR_BUILD='integration/macos/PitPatMenuBar/.build/PitPat.app'
 LAUNCHER_BUILD='integration/macos/PitPatMenuBar/.build/PitPatSafety'
 LOGS='Library/Logs/PitPat'
 PLACEHOLDER=re.compile(rb'@[A-Z_]+@')
 
 
+def metadata_file(relative):
+    return Path(METADATA) in relative.parents and not relative.is_absolute() and all(part not in ('.','..') for part in relative.parts)
+
+
 def managed(home,path):
-    # Signing writes its own files into _CodeSignature; nothing else in a bundle is ours.
+    # Only the menu bar metadata subtree and signing files extend the fixed allowlist.
     path=Path(path)
     if path in {home/p for p in STATIC}:return True
     for bundle,files in BUNDLES.items():
         if path in {home/bundle/f for f in files}:return True
+        if bundle==MENUBAR_APP and path.is_relative_to(home/bundle) and metadata_file(path.relative_to(home/bundle)):return True
         if path.parent==home/bundle/SIGNATURE and re.fullmatch(r'[A-Za-z0-9-]+',path.name):return True
     return False
 
@@ -82,9 +88,11 @@ def plan(home,repo,menubar=None,launcher=None):
     menubar=Path(menubar or repo/MENUBAR_BUILD).absolute();launcher=Path(launcher or repo/LAUNCHER_BUILD).absolute()
     for built in (menubar/'Contents/MacOS/PitPatMenuBar',launcher):
         if not built.is_file():raise ValueError('Menu bar app or safety launcher not built; run scripts/build-menubar.sh first: '+str(built))
+    metadata=[]
     for path in tree(menubar):
         relative=path.relative_to(menubar)
-        if str(relative) not in BUNDLES[MENUBAR_APP] and relative.parent!=Path(SIGNATURE):
+        if metadata_file(relative):metadata.append(relative)
+        elif str(relative) not in BUNDLES[MENUBAR_APP] and relative.parent!=Path(SIGNATURE):
             raise ValueError('Unexpected file in menu bar build: '+str(path))
     python=repo/'.venv/bin/python';logs=home/LOGS
     safety=repo/'integration/macos/PitPat Safety.app/Contents'
@@ -105,6 +113,7 @@ def plan(home,repo,menubar=None,launcher=None):
     binaries={home/MENUBAR_APP/'Contents/MacOS/PitPatMenuBar',home/SAFETY_APP/'Contents/MacOS/pitpat-safety'}
     for path,(data,_) in outputs.items():
         if path not in binaries and PLACEHOLDER.search(data):raise ValueError('Unfilled placeholder in '+str(path))
+    for relative in metadata:outputs[home/MENUBAR_APP/relative]=((menubar/relative).read_bytes(),0o644)
     # A previous signature is replaced when apply signs again.
     for bundle in BUNDLES:
         for path in bundle_files(home,bundle):outputs.setdefault(path,(None,0o644))
