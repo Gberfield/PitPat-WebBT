@@ -11,9 +11,9 @@ D1–D4. T9, on branch `codex/t9-siri-intents-spike`, adds a read-only status in
 and builds the menu bar app with Xcode so the intent metadata is generated; see the
 [spike report](siri-intents-spike.md). All checks pass, and the build contains the
 intent and both phrases. It is not installed: Shortcuts/Siri registration is
-unverified, and no reliable way was found for the app to tell an intent launch
-from a normal open, so an intent run while PitPat is closed would still start the
-services (D2 is not met yet). Macs and Linux share one codebase.
+unverified. No reliable way was found for the app to tell an intent launch from a
+normal open, so the owner revised D2 the same day: Siri opening PitPat counts as
+opening it, with a best-effort guard so a voice Stop on a closed PitPat refuses. Macs and Linux share one codebase.
 On November 4, 2026 the menu bar app began starting both services when it opens
 and stopping them when it quits, so `pitpat controls` is no longer needed. It is
 merged and installed on the owner's MacBook. Opening **PitPat Safety** by hand now
@@ -114,8 +114,11 @@ Settled; don't reopen them without the owner. Newest first.
 - **November 11, 2026: Siri scope.** The owner accepted D1–D4 in
   [Siri integration](siri-integration.md): voice gets Status and Stop first,
   then Pause, and Start only with Siri's spoken confirmation; no speed changes.
-  An intent never starts the services. Siri's Stop sends exactly what the Stop
+  Siri's Stop sends exactly what the Stop
   hotkey sends. Building the menu bar app may require the full Xcode.
+  Revised the same day after T9: Siri opening PitPat counts as opening it and
+  may start the services; the voice Stop refuses if safety wasn't already
+  running when PitPat launched.
 
 - **November 9, 2026: record review is its own safety gate.** An interrupted walk
   record that needs review blocks motion in the safety process through the non-fault

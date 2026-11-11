@@ -67,6 +67,15 @@ safety confirmed it.
   when nothing is running would start safety and then latch a fault (see D3).
   Whether this can be detected reliably is part of T9; if it can't, the
   fallback is that Siri launching PitPat counts as opening it.
+  **Revised November 11, 2026, after T9:** T9 found no documented way to tell
+  an intent launch from a normal open before services start, and the owner
+  chose the fallback: Siri launching PitPat counts as opening it, so an intent
+  may start the services. One guard is added: the Stop intent refuses with
+  "PitPat isn't open" when the safety process wasn't already running before the
+  app launched, so a voice Stop on a closed PitPat can't latch a fault. That
+  check is best effort; if it misjudges, the worst case is the fault described
+  in D3. A separate intents process (which would guarantee "never starts") was
+  considered and not chosen.
 - **D3. Stop with nothing connected.** `pitpat stop` and the Stop hotkey latch a
   fault when no treadmill is connected (STATUS optional item 4, left unchanged
   on purpose). Recommendation: the Siri Stop sends exactly what the hotkey
@@ -80,8 +89,9 @@ safety confirmed it.
 ## Task outline
 
 Each task follows the Codex handoff workflow. The T9 brief is in
-[docs/handoffs/](handoffs/T9-siri-intents-spike.md); T10–T13 briefs are written
-after T9, since its build and launch findings shape them. All automated work
+[docs/handoffs/](handoffs/T9-siri-intents-spike.md); T10 brief is
+[T10-status-intent.md](handoffs/T10-status-intent.md); T11–T13 briefs follow
+in order. All automated work
 uses the simulator services only.
 
 - **T9. Spike: intents build and register (high).** Move the build to one that
