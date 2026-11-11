@@ -2,6 +2,7 @@
 // registered view, so closing the popover keeps tray control; quitting releases it.
 // AppKit owns the status item and popover so the hotkey and pitpat://controls can open it.
 import AppKit
+import os
 import Carbon.HIToolbox
 import Combine
 import SwiftUI
@@ -169,6 +170,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     // Same path as `pitpat stop`: straight to safety.sock, never the control socket.
     private func safetyStop() {
         SafetyStop.run(runtime: service.runtime) { [weak self] failure in
+            Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop hotkey outcome=\(failure == nil ? "stopped_confirmed" : "unconfirmed", privacy: .public) detail=\(failure ?? "Treadmill reported stopped with zero speed.", privacy: .public)")
             guard let self, let failure else { return }
             self.service.warning = failure
             self.notify(failure)

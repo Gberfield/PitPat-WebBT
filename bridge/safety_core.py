@@ -7,6 +7,7 @@ from .control_core import Controller as StopKernel, CommandCancelled
 from .protocol import parse_telemetry,encode_command,HEARTBEAT
 from .safety_health import HealthMonitor,boot_seconds,OWNER_TIMEOUT,TELEMETRY_TIMEOUT
 from .safety_messages import Authority
+from .stop_log import stop_log
 
 class SafetyCore(StopKernel):
     def __init__(self,backend,*,clock=boot_seconds):
@@ -21,6 +22,25 @@ class SafetyCore(StopKernel):
         self.stop_confirmation_id=None;self.confirmed_at=None
         self.telemetry_seq=0;self.ring=deque(maxlen=256);self.ring_overflow=False
         self.link_state='disconnected';self.motion_pending=False;self.closing=False
+        self.log_stop_seq=0;self.log_reports_active=False;self.log_reports_until=None
+        self.log_confirmation=None;self.log_write_error=None
+    def log(self,event,**data):
+        try:stop_log(event,safety_id=self.safety_id,link_epoch=self.link_epoch,**data)
+        except Exception:pass
+    def log_request(self,reason,source,client_kind):
+        try:
+            self.log_stop_seq+=1
+            self.log('stop_request',stop_id=self.log_stop_seq,source=source,client_kind=client_kind,reason=reason,
+                link_state=self.link_state,connected=self.connected,authorization_state=self.snapshot()['authorization_state'],
+                state=self.last.state if self.last else None,speed_raw=self.last.speed_raw if self.last else None,
+                report_age=self.clock()-self.last_valid if self.last and self.last_valid is not None else None)
+            return self.log_stop_seq
+        except Exception:return None
+    def log_report(self,report):
+        try:
+            if self.log_reports_active or self.log_reports_until is not None and self.clock()<=self.log_reports_until:
+                self.log('stop_report',seq=self.telemetry_seq,state=report.state,speed_raw=report.speed_raw,distance=report.distance,duration=report.duration)
+        except Exception:pass
     def snapshot(self):
         stale=self.last_valid is None or self.clock()-self.last_valid>=TELEMETRY_TIMEOUT
         state='fault-latched' if self.fault_id else ('stopping' if self.stop_task and not self.stop_task.done() else 'ready' if self.grant_id else 'unarmed')
@@ -60,6 +80,7 @@ class SafetyCore(StopKernel):
             self.fault=dict(id=self.fault_id,reason=reason,telemetry_seq=self.telemetry_seq,stop_outcome='unconfirmed')
         self.grant_id=None;self.owner_id=None;self.owner_kind=None;self.recording_ready=False
         self.blocked=self.recovery=True;self.motion_generation+=1
+        self.log('fault_trip',id=self.fault_id,reason=reason)
         if new_fault:self.emit('fault',message=reason+'; motion blocked. Use the physical stop if needed.')
         if new_fault and self.connected and not self.closing and not (self.stop_task and not self.stop_task.done()):
             self.spawn(self.stop(reason,latch=False))
@@ -105,15 +126,25 @@ class SafetyCore(StopKernel):
         self.telemetry_seq+=1
         if len(self.ring)==self.ring.maxlen:self.ring_overflow=True
         self.ring.append(dict(seq=self.telemetry_seq,link_epoch=epoch,hex=packet.hex()))
+        pending=self.stop_report and not self.stop_report.done()
         super().packet(packet,epoch)
+        try:
+            if pending and self.stop_report.done() and not self.stop_report.cancelled() and self.stop_report.result():
+                self.log_confirmation=dict(state=report.state,speed_raw=report.speed_raw,seq=self.telemetry_seq)
+        except Exception:pass
+        self.log_report(report)
     async def write(self,packet,generation,motion=None,before_write=None):
         from . import control_core
         async with self.lock:
             if not self.connected or generation!=self.generation:raise CommandCancelled('Bluetooth connection lost')
             if motion is not None and (motion!=self.motion_generation or self.blocked):raise CommandCancelled('Queued motion cancelled')
             if before_write:before_write()
+            is_stop=len(packet)==23 and packet[12]==0
+            if is_stop:
+                self.log_reports_active=True;self.log_confirmation=None;self.log_write_error=None
             try:await asyncio.wait_for(self.backend.write(packet),control_core.STOP_TIMEOUT)
-            except BaseException:
+            except BaseException as exc:
+                if is_stop:self.log_write_error='timeout' if isinstance(exc,(TimeoutError,asyncio.CancelledError)) else 'write_failed'
                 if len(packet)==23 and packet[12]!=0:self.writer_uncertain=True
                 raise
 
@@ -124,7 +155,13 @@ class SafetyCore(StopKernel):
         except Exception:
             if self.connected and generation==self.generation:self.trip('Bluetooth heartbeat write failed')
         finally:self.heartbeat_pending=False
-    async def stop(self,reason='user',*,latch=False):
+    async def perform_stop(self,generation):
+        try:return await super().perform_stop(generation)
+        finally:
+            try:self.log_reports_active=False;self.log_reports_until=self.clock()+15
+            except Exception:pass
+    async def stop(self,reason='user',*,latch=False,source='internal',client_kind=None):
+        stop_id=self.log_request(reason,source,client_kind);started=self.clock();epoch=self.link_epoch;generation=self.generation
         if latch:self.trip(reason)
         if not (self.stop_task and not self.stop_task.done()):
             self.stop_confirmation_id=None;self.confirmed_at=None
@@ -139,12 +176,20 @@ class SafetyCore(StopKernel):
                 # Do not recursively retry an unconfirmed Stop.
                 self.fault_generation+=1;self.fault_id=secrets.token_hex(16)
                 self.fault=dict(id=self.fault_id,reason=reason,telemetry_seq=self.telemetry_seq)
+                self.log('fault_trip',id=self.fault_id,reason=reason)
             self.grant_id=None;self.owner_id=None;self.owner_kind=None;self.recording_ready=False
         self.blocked=bool(self.fault_id) or not bool(self.grant_id)
         self.recovery=bool(self.fault_id)
         outcome='stopped_confirmed' if confirmed else 'unconfirmed'
         if self.fault:self.fault['stop_outcome']=outcome
         self.emit('safety',confirmed=confirmed,message='Treadmill reported stopped with zero speed.' if confirmed else 'Stop unconfirmed. Use the physical stop control.' + (' Prior motion write may still complete; power-cycle the stopped treadmill before recovery.' if self.writer_uncertain else ''))
+        try:
+            why=None if confirmed else ('writer_uncertain' if self.writer_uncertain else 'link_change' if not self.connected or epoch!=self.link_epoch or generation!=self.generation else self.log_write_error or ('report_changed' if self.log_confirmation else 'timeout'))
+            self.log('stop_result',stop_id=stop_id,outcome=outcome,confirmed=bool(confirmed),unconfirmed_reason=why,
+                state=self.log_confirmation['state'] if confirmed and self.log_confirmation else None,
+                speed_raw=self.log_confirmation['speed_raw'] if confirmed and self.log_confirmation else None,
+                report_seq=self.log_confirmation['seq'] if confirmed and self.log_confirmation else None,elapsed=self.clock()-started)
+        except Exception:pass
         return dict(outcome=outcome,confirmed=confirmed,stop_confirmation_id=self.stop_confirmation_id)
     async def disconnect_confirmed(self):
         if not (self.stop_confirmation_id and self.last and self.last.stopped and self.last_valid is not None and self.clock()-self.last_valid<5):return False
@@ -202,10 +247,11 @@ class SafetyCore(StopKernel):
         if op=='owner_lost':
             if a.grant_id!=self.grant_id:raise ValueError('Not current owner')
             self.trip('Motion controller connection lost')
-            return await self.stop('Motion controller connection lost')
+            return await self.stop('Motion controller connection lost',source='application')
         if op in ('stop','stop_disconnect','release'):
             if op=='release' and a.grant_id!=self.grant_id:raise ValueError('Not current grant')
-            result=await self.stop(op)
+            # Safety IPC does not carry the requesting application's client kind.
+            result=await self.stop(op,source='application')
             if result['confirmed'] and op!='stop':await self.disconnect_confirmed()
             return result
         if op=='recording_ready':
@@ -220,6 +266,7 @@ class SafetyCore(StopKernel):
                 if self.fault_id:raise ValueError('Explicit fault recovery required')
             else:
                 if (not self.fault_id or args['fault_id']!=self.fault_id or args['stop_confirmation_id']!=self.stop_confirmation_id or self.confirmed_at is None or self.clock()-self.confirmed_at>=5):raise ValueError('Require fresh Stop confirmation for current fault')
+                self.log('recovery_ack',id=self.fault_id,reason=self.fault.get('reason') if self.fault else None)
                 self.fault_id=None;self.fault=None
             return self.grant(args)
         if op=='renew':
