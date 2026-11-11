@@ -19,7 +19,7 @@ final class StatusDialogTests: XCTestCase {
             "stale": "Motion unknown. The reading is stale.",
             "fault": "Stopped. 0.00 mph, 1.000 mi, 10m 0s, 1000 steps. Use the physical stop control if needed.",
             "recovery": "Motion unknown. Use the physical stop control if needed.",
-            "stopping": "Stopping.", "stopping-no-owner": "Stopping.",
+            "stopping": "Stopping.", "stopping-no-owner": "Stopping.", "stopped-state-moving": "Stopping.",
             "safety-unavailable": "Safety unavailable.",
             "unknown-state": "Motion unknown.", "no-metrics": "Motion unknown."
         ]
