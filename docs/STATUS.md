@@ -5,7 +5,9 @@ changes. Read it first when picking the project up again.
 
 ## Where things stand
 
-Nothing is in progress and nothing is blocked. Macs and Linux share one codebase.
+Nothing is in progress and nothing is blocked. On November 11, 2026 a Siri
+integration plan was proposed ([plan](siri-integration.md), PLAN.md T9–T13) and
+the owner settled its decisions D1–D4. Nothing is built; T9 was delegated to Codex the same day. Macs and Linux share one codebase.
 On November 4, 2026 the menu bar app began starting both services when it opens
 and stopping them when it quits, so `pitpat controls` is no longer needed. It is
 merged and installed on the owner's MacBook. Opening **PitPat Safety** by hand now
@@ -102,6 +104,12 @@ None of this is required. Each item waits on the owner.
 ## Owner decisions
 
 Settled; don't reopen them without the owner. Newest first.
+
+- **November 11, 2026: Siri scope.** The owner accepted D1–D4 in
+  [Siri integration](siri-integration.md): voice gets Status and Stop first,
+  then Pause, and Start only with Siri's spoken confirmation; no speed changes.
+  An intent never starts the services. Siri's Stop sends exactly what the Stop
+  hotkey sends. Building the menu bar app may require the full Xcode.
 
 - **November 9, 2026: record review is its own safety gate.** An interrupted walk
   record that needs review blocks motion in the safety process through the non-fault

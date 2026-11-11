@@ -13,6 +13,18 @@ Goal: fix the implicit-state-machine defects recorded in GitHub issue #49 (2026-
 | T5 | One health check that includes expiry: rename `HealthMonitor.healthy`, add `is_healthy()` (#38). Brief: docs/handoffs/T5-health-monitor-is-healthy.md | bridge/safety_health.py, bridge/safety_core.py, tests/test_safety_ipc.py, tests/test_safety_client.py, a HealthMonitor unit test | Behaviour unchanged; existing tests pass after the rename; new HealthMonitor tests for expiry; both check commands pass; Codex review + adversarial review | gpt-6.1-sol | medium | done |
 | T6 | Document the safety authorization states and fault-recovery path, with a state diagram (#36). Brief: docs/handoffs/T6-safety-recovery-path-doc.md | docs/safety-states.md (new), docs/README.md, docs/superpowers/plans/2026-10-15-dedicated-safety-process.md | Docs only; Claude checks every guard and time limit against the code; both check commands pass; Codex review | gpt-6.1-sol | medium | done |
 
+### Siri integration (proposed November 11, 2026)
+
+Design, owner decisions D1–D4 (settled 2026-11-11) and acceptance: docs/siri-integration.md. T9 brief: docs/handoffs/T9-siri-intents-spike.md. T10–T13 briefs follow T9's findings; they start from main after T9 is merged. T7 and T8 (the #61 and #62 fixes, 2026-11-09) are on the unmerged branch codex/t7-confirmation-bound-to-fault, not on main yet.
+
+| ID | Task | Files | Acceptance check | Model | Effort | Status |
+| --- | --- | --- | --- | --- | --- | --- |
+| T9 | Spike: build emits App Intents metadata; one read-only status intent; installer copies the metadata; record launch-while-closed behaviour | scripts/build-menubar.sh, scripts/install-macos.py, integration/macos/PitPatMenuBar/ (Package.swift or a new Xcode project, a new Intents.swift), tests for the installer | Built app contains Metadata.appintents; installer test passes; intent listed in Shortcuts on simulator services; findings recorded; both check commands and swift test pass; Codex review | gpt-6.1-sol | high | delegated |
+| T10 | Status intents: state, speed, distance, time, steps from Model.view | integration/macos/PitPatMenuBar/Sources/PitPatMenuBar/Intents.swift, Tests/ | Swift tests over model-cases.json fixtures for every snapshot kind; both check commands and swift test pass; Codex review | gpt-6.1-sol | medium | proposed |
+| T11 | Stop intent through SafetyStop.run; "Stopped" only on stopped_confirmed | Intents.swift, SafetyStop.swift if needed, Tests/ | Fake safety.sock tests for confirmed, unconfirmed, timeout and missing socket; both check commands and swift test pass; Codex review + adversarial review | gpt-6.1-sol | high | proposed |
+| T12 | Motion intents allowed by D1 (Pause; Start with confirmation) through the owner's Service path | Intents.swift, Service.swift if needed, Tests/ | Refused when not owner or canStartPause is false; no take-control or connect by voice; simulator walk test; both check commands and swift test pass; Codex review + adversarial review | gpt-6.1-sol | xhigh | proposed |
+| T13 | Siri docs: README, macOS operations, acceptance section, STATUS | README.md, docs/macos-operations.md, docs/macos-acceptance.md, docs/STATUS.md | Docs only; Claude checks phrases and wording against the code; Codex review | gpt-6.1-sol | low | proposed |
+
 ### Stop incident follow-ups (proposed November 11, 2026)
 
 On 2026-11-11 at 4:55 PM a Stop during a 1.0 mph walk was reported as stopped (the walk ended on a state 3, zero-speed report) while the owner says the belt kept moving; later reports showed state 3 with speed 1.0 and the labels said "Stopped". See docs/STATUS.md. T14 and T15 start from main; the Siri tasks (T9–T13) are on unmerged branches.
@@ -30,5 +42,6 @@ Effort is low, medium, high or xhigh, fitted by Claude per task and adjustable b
 
 ## Decisions
 
+- 2026-11-11: the owner accepted the Siri recommendations D1–D4 in docs/siri-integration.md: Status and Stop first, then Pause, Start only with spoken confirmation, no speed changes; intents never start the services; Siri Stop matches the Stop hotkey exactly; the full Xcode may become a build requirement.
 - 2026-11-09: T1's adversarial review found that motion queued before an interrupt can still be written (#50, already on main). The owner chose to keep T1 as is, since it narrows the window, and to fix the write boundary separately as T4.
 

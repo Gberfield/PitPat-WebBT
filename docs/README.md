@@ -20,6 +20,10 @@ of it.
 - [Firefox bridge](firefox-bridge-acceptance.md)
 - [Safety failure tests](safety-failure-tests.md)
 
+## Proposed work
+
+- [Siri integration](siri-integration.md): plan and owner decisions, not built.
+
 ## How it was built
 
 - [macOS plans](mac/README.md): the work packages, with the Bluetooth launcher
