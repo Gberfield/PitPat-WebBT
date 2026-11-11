@@ -23,7 +23,7 @@ class SafetyCore(StopKernel):
         self.telemetry_seq=0;self.ring=deque(maxlen=256);self.ring_overflow=False
         self.link_state='disconnected';self.motion_pending=False;self.closing=False
         self.log_stop_seq=0;self.log_reports_active=False;self.log_reports_until=None
-        self.log_confirmation=None;self.log_write_error=None
+        self.log_diagnostics={}
     def log(self,event,**data):
         try:stop_log(event,safety_id=self.safety_id,link_epoch=self.link_epoch,**data)
         except Exception:pass
@@ -80,7 +80,7 @@ class SafetyCore(StopKernel):
             self.fault=dict(id=self.fault_id,reason=reason,telemetry_seq=self.telemetry_seq,stop_outcome='unconfirmed')
         self.grant_id=None;self.owner_id=None;self.owner_kind=None;self.recording_ready=False
         self.blocked=self.recovery=True;self.motion_generation+=1
-        self.log('fault_trip',id=self.fault_id,reason=reason)
+        if new_fault:self.log('fault_trip',id=self.fault_id,reason=reason)
         if new_fault:self.emit('fault',message=reason+'; motion blocked. Use the physical stop if needed.')
         if new_fault and self.connected and not self.closing and not (self.stop_task and not self.stop_task.done()):
             self.spawn(self.stop(reason,latch=False))
@@ -130,7 +130,7 @@ class SafetyCore(StopKernel):
         super().packet(packet,epoch)
         try:
             if pending and self.stop_report.done() and not self.stop_report.cancelled() and self.stop_report.result():
-                self.log_confirmation=dict(state=report.state,speed_raw=report.speed_raw,seq=self.telemetry_seq)
+                self.log_diagnostics['confirmation']=dict(state=report.state,speed_raw=report.speed_raw,seq=self.telemetry_seq)
         except Exception:pass
         self.log_report(report)
     async def write(self,packet,generation,motion=None,before_write=None):
@@ -141,10 +141,10 @@ class SafetyCore(StopKernel):
             if before_write:before_write()
             is_stop=len(packet)==23 and packet[12]==0
             if is_stop:
-                self.log_reports_active=True;self.log_confirmation=None;self.log_write_error=None
+                self.log_reports_active=True
             try:await asyncio.wait_for(self.backend.write(packet),control_core.STOP_TIMEOUT)
             except BaseException as exc:
-                if is_stop:self.log_write_error='timeout' if isinstance(exc,(TimeoutError,asyncio.CancelledError)) else 'write_failed'
+                if is_stop:self.log_diagnostics['write_error']='timeout' if isinstance(exc,(TimeoutError,asyncio.CancelledError)) else 'write_failed'
                 if len(packet)==23 and packet[12]!=0:self.writer_uncertain=True
                 raise
 
@@ -156,6 +156,7 @@ class SafetyCore(StopKernel):
             if self.connected and generation==self.generation:self.trip('Bluetooth heartbeat write failed')
         finally:self.heartbeat_pending=False
     async def perform_stop(self,generation):
+        self.log_diagnostics.update(confirmation=None,write_error=None)
         try:return await super().perform_stop(generation)
         finally:
             try:self.log_reports_active=False;self.log_reports_until=self.clock()+15
@@ -165,6 +166,9 @@ class SafetyCore(StopKernel):
         if latch:self.trip(reason)
         if not (self.stop_task and not self.stop_task.done()):
             self.stop_confirmation_id=None;self.confirmed_at=None
+            self.log_diagnostics={}
+        # Joiners retain the same record even if a later Stop starts before they resume.
+        diagnostics=self.log_diagnostics
         confirmed=await super().stop()
         confirmed=confirmed and not self.writer_uncertain
         if confirmed:
@@ -184,11 +188,12 @@ class SafetyCore(StopKernel):
         if self.fault:self.fault['stop_outcome']=outcome
         self.emit('safety',confirmed=confirmed,message='Treadmill reported stopped with zero speed.' if confirmed else 'Stop unconfirmed. Use the physical stop control.' + (' Prior motion write may still complete; power-cycle the stopped treadmill before recovery.' if self.writer_uncertain else ''))
         try:
-            why=None if confirmed else ('writer_uncertain' if self.writer_uncertain else 'link_change' if not self.connected or epoch!=self.link_epoch or generation!=self.generation else self.log_write_error or ('report_changed' if self.log_confirmation else 'timeout'))
+            confirmation=diagnostics.get('confirmation')
+            why=None if confirmed else ('writer_uncertain' if self.writer_uncertain else 'link_change' if not self.connected or epoch!=self.link_epoch or generation!=self.generation else diagnostics.get('write_error') or ('report_changed' if confirmation else 'timeout'))
             self.log('stop_result',stop_id=stop_id,outcome=outcome,confirmed=bool(confirmed),unconfirmed_reason=why,
-                state=self.log_confirmation['state'] if confirmed and self.log_confirmation else None,
-                speed_raw=self.log_confirmation['speed_raw'] if confirmed and self.log_confirmation else None,
-                report_seq=self.log_confirmation['seq'] if confirmed and self.log_confirmation else None,elapsed=self.clock()-started)
+                state=confirmation['state'] if confirmed and confirmation else None,
+                speed_raw=confirmation['speed_raw'] if confirmed and confirmation else None,
+                report_seq=confirmation['seq'] if confirmed and confirmation else None,elapsed=self.clock()-started)
         except Exception:pass
         return dict(outcome=outcome,confirmed=confirmed,stop_confirmation_id=self.stop_confirmation_id)
     async def disconnect_confirmed(self):

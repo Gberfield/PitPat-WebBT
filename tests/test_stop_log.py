@@ -132,6 +132,46 @@ class StopLogTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.events('recovery_ack')[0]['id'], fault_id)
         self.assertEqual(self.events('recovery_ack')[0]['reason'], 'synthetic trip')
 
+    async def test_repeated_trips_log_once_until_recovery(self):
+        self.core.trip('first fault'); await self.flush(); self.backend.packet(report()); await self.flush()
+        first_id = self.core.fault_id
+        generation = self.core.motion_generation
+        for _ in range(10): self.core.trip('Application health expired')
+        self.assertEqual(len(self.events('fault_trip')), 1)
+        self.assertEqual(self.core.motion_generation, generation + 10)
+        self.assertEqual(self.core.fault_id, first_id)
+        self.core.attach_application('app'); self.core.accept_health(self.core.health.issue_challenge())
+        self.core.recording_ready = True
+        await self.core.handle_application('recover', self.core.authority(), dict(fault_id=first_id,
+            stop_confirmation_id=self.core.stop_confirmation_id, owner_id='owner', owner_kind='browser'))
+        self.core.trip('second fault'); await self.flush(); self.backend.packet(report()); await self.flush()
+        for _ in range(10): self.core.trip('second fault repeated')
+        trips = self.events('fault_trip')
+        self.assertEqual(len(trips), 2)
+        self.assertEqual([line['reason'] for line in trips], ['first fault', 'second fault'])
+        self.assertNotEqual(trips[0]['id'], trips[1]['id'])
+
+    async def test_writer_wait_does_not_reuse_failed_stop_diagnostics(self):
+        with patch.object(self.backend, 'write', side_effect=OSError('fake Stop write failed')):
+            self.assertFalse((await self.core.stop('failed write'))['confirmed'])
+        self.assertEqual(self.events('stop_result')[-1]['unconfirmed_reason'], 'write_failed')
+        await self.core.lock.acquire()
+        try:
+            with patch('bridge.control_core.STOP_TIMEOUT', .02):
+                first = asyncio.create_task(self.core.stop('waiting for writer'))
+                await self.flush()
+                joined = asyncio.create_task(self.core.stop('joined writer wait'))
+                self.assertFalse((await first)['confirmed'])
+                self.assertFalse((await joined)['confirmed'])
+        finally: self.core.lock.release()
+        results = self.events('stop_result')[-2:]
+        for result in results:
+            self.assertIn(result['unconfirmed_reason'], ('writer_wait', 'timeout'))
+            self.assertIsNone(result['state'])
+            self.assertIsNone(result['speed_raw'])
+        self.assertEqual(self.backend.writes, [])
+        self.assertEqual(len(self.events('fault_trip')), 1)
+
     async def test_writer_uncertain(self):
         self.core.writer_uncertain = True
         task = asyncio.create_task(self.core.stop('uncertain'))
