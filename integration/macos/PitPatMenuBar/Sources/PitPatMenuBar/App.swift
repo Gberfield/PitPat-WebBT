@@ -77,6 +77,13 @@ struct ControlsView: View {
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private static let shared = AppDelegate()
     @MainActor static var intentService: Service { shared.service }
+    @MainActor static func intentStop() async -> String {
+        await stopIntentDialog(safetyRunningAtLaunch: shared.safetyRunningAtLaunch,
+                               hasSeenTreadmillConnection: shared.service.hasSeenTreadmillConnection) {
+            await shared.runSafetyStop()
+        }
+    }
+    private(set) var safetyRunningAtLaunch = false
     let service = Service()
     private var item: NSStatusItem!
     private let popover = NSPopover()
@@ -103,6 +110,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         host.sizingOptions = .preferredContentSize
         popover.contentViewController = host
         observer = service.objectWillChange.sink { [weak self] _ in DispatchQueue.main.async { self?.updateButton() } }
+        safetyRunningAtLaunch = safetyIsRunning(path: service.runtime + "/safety.sock")
         if ServiceStart.shouldStart() {
             ServiceStart.run { [weak self] failure in if let failure { self?.service.errorText = failure } }
         }
@@ -170,12 +178,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Same path as `pitpat stop`: straight to safety.sock, never the control socket.
     private func safetyStop() {
-        SafetyStop.run(runtime: service.runtime) { [weak self] failure in
-            Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop hotkey outcome=\(failure == nil ? "stopped_confirmed" : "unconfirmed", privacy: .public) detail=\(failure ?? "Treadmill reported stopped with zero speed.", privacy: .public)")
-            guard let self, let failure else { return }
-            self.service.warning = failure
-            self.notify(failure)
-            self.showControls()
+        Task { await runSafetyStop() }
+    }
+
+    @MainActor
+    @discardableResult
+    private func runSafetyStop() async -> String? {
+        await withCheckedContinuation { continuation in
+            SafetyStop.run(runtime: service.runtime) { failure in
+                Logger(subsystem: "com.gberfield.pitpat.menubar", category: "SafetyStop").notice("SafetyStop outcome=\(failure == nil ? "stopped_confirmed" : "unconfirmed", privacy: .public) detail=\(failure ?? "Treadmill reported stopped with zero speed.", privacy: .public)")
+                if let failure {
+                    self.service.warning = failure
+                    self.notify(failure)
+                    self.showControls()
+                }
+                continuation.resume(returning: failure)
+            }
         }
     }
 

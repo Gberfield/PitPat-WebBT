@@ -14,7 +14,12 @@ func runtimePath(_ env: [String: String] = ProcessInfo.processInfo.environment) 
 final class Service: ObservableObject {
     struct Pending { let op: String; let generation: Int; let at: Date; let callback: ((JSON) -> Void)? }
 
-    @Published private(set) var snapshot: JSON = .object(["available": .bool(false), "connected": .bool(false)])
+    @Published private(set) var snapshot: JSON = .object(["available": .bool(false), "connected": .bool(false)]) {
+        didSet {
+            if snapshot["connected"].truthy || snapshot["connecting"].truthy { hasSeenTreadmillConnection = true }
+        }
+    }
+    private(set) var hasSeenTreadmillConnection = false
     @Published private(set) var devices: [Device] = []
     @Published private(set) var authorized = false
     @Published var warning = ""

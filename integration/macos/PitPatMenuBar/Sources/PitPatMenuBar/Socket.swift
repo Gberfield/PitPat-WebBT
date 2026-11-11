@@ -20,6 +20,14 @@ func connectUnix(_ path: String) -> Int32 {
     return fd
 }
 
+// Launch-only reachability probe: no hello or command, and no retained connection.
+func safetyIsRunning(path: String) -> Bool {
+    let fd = connectUnix(path)
+    guard fd >= 0 else { return false }
+    close(fd)
+    return true
+}
+
 // Writes every byte, waiting up to two seconds for a full socket buffer.
 func writeAll(_ fd: Int32, _ text: String) -> Bool {
     var data = Array(text.utf8)[...]

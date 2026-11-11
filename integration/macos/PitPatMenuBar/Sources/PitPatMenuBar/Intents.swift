@@ -57,11 +57,35 @@ struct PitPatStatusIntent: AppIntent {
     }
 }
 
+// Refuse only the closed-app case; current snapshot state never gates an allowed Stop.
+@MainActor
+func stopIntentDialog(safetyRunningAtLaunch: Bool, hasSeenTreadmillConnection: Bool,
+                      stop: () async -> String?) async -> String {
+    if !safetyRunningAtLaunch && !hasSeenTreadmillConnection {
+        return "PitPat wasn't open, so no treadmill is connected. Nothing was stopped."
+    }
+    return await stop() ?? "Stopped."
+}
+
+struct PitPatStopIntent: AppIntent {
+    static var title: LocalizedStringResource = "Stop PitPat"
+    static var openAppWhenRun: Bool = false
+
+    @MainActor
+    func perform() async throws -> some IntentResult & ProvidesDialog {
+        return .result(dialog: IntentDialog(stringLiteral: await AppDelegate.intentStop()))
+    }
+}
+
 struct PitPatShortcuts: AppShortcutsProvider {
     static var appShortcuts: [AppShortcut] {
         AppShortcut(intent: PitPatStatusIntent(), phrases: [
             "PitPat status in \(.applicationName)",
             "How's my walk in \(.applicationName)"
         ], shortTitle: "PitPat Status", systemImageName: "figure.walk")
+        AppShortcut(intent: PitPatStopIntent(), phrases: [
+            "Stop \(.applicationName)",
+            "Stop the treadmill in \(.applicationName)"
+        ], shortTitle: "Stop PitPat", systemImageName: "stop.fill")
     }
 }
