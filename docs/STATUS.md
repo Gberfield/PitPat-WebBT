@@ -6,14 +6,13 @@ changes. Read it first when picking the project up again.
 ## Where things stand
 
 On November 11, 2026 a Siri integration plan was proposed
-([plan](siri-integration.md), PLAN.md T9–T13) and the owner settled its decisions
-D1–D4. T9, on branch `codex/t9-siri-intents-spike`, adds a read-only status intent
-and builds the menu bar app with Xcode so the intent metadata is generated; see the
-[spike report](siri-intents-spike.md). All checks pass, and the build contains the
-intent and both phrases. It is not installed: Shortcuts/Siri registration is
-unverified. No reliable way was found for the app to tell an intent launch from a
-normal open, so the owner revised D2 the same day: Siri opening PitPat counts as
-opening it, with a best-effort guard so a voice Stop on a closed PitPat refuses. Macs and Linux share one codebase.
+([plan](siri-integration.md), PLAN.md T9–T13) and built through T11 on the unmerged
+branch `codex/t11-stop-intent`: a status intent and a "Stop PitPat" intent that
+sends exactly what the Stop hotkey sends. The owner confirmed both appear in
+Shortcuts and that status works. The same evening a Stop during a walk was
+reported as stopped while the belt kept moving (optional item 7); the label fix
+(T14) and the Stop log (T15) were merged to `main` in #63. T12 and T13 wait.
+Macs and Linux share one codebase.
 On November 4, 2026 the menu bar app began starting both services when it opens
 and stopping them when it quits, so `pitpat controls` is no longer needed. It is
 merged and installed on the owner's MacBook. Opening **PitPat Safety** by hand now
@@ -57,7 +56,9 @@ gap mid-walk) have not been exercised on hardware.
   [dedicated-safety plan](superpowers/plans/2026-10-15-dedicated-safety-process.md).
 
 - **macOS:** installed on the owner's MacBook in `~/Applications`, running from the
-  repository checkout on `main`. Physical acceptance passed on October 29, 2026; see
+  repository checkout. Since November 11, 2026 the checkout is detached at the
+  rebased Siri branch tip (`main` with #63 plus T9–T11), and the services were
+  reinstalled and restarted together onto it. Physical acceptance passed on October 29, 2026; see
   [macOS acceptance](macos-acceptance.md). The services were restarted onto the
   November 9 fixes that day. After any future update, restart both services
   together, never one alone: since #50, an application and safety process from
@@ -111,8 +112,9 @@ None of this is required. Each item waits on the owner.
    in the menu bar. Later reports showed state 3 with speed 1.0 and frozen
    counters, which the labels showed as "Stopped". Safety restarted soon after,
    so whether the intent's Stop caused the confirmation can't be traced. This is
-   the question in #35 and also affects the hotkey and menu bar Stop. Proposed:
-   T14 (label) and T15 (Stop log); a supervised treadmill test needs the owner.
+   the question in #35 and also affects the hotkey and menu bar Stop. T14 (label)
+   and T15 (Stop log) were merged in #63 and installed the same evening; a
+   supervised treadmill test of Stop at walking speed, with the log, needs the owner.
    Don't rely on voice or Spotlight Stop until it is understood.
 
 ## Owner decisions
